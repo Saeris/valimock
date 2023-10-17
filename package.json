@@ -1,0 +1,145 @@
+{
+  "name": "valimock",
+  "description": "Generate mock data for Valibot schemas using Faker",
+  "version": "0.0.1",
+  "license": "MIT",
+  "author": "Drake Costa <drake@saeris.gg> (https://saeris.gg)",
+  "keywords": [
+    "valibot",
+    "mocking",
+    "faker"
+  ],
+  "homepage": "https://github.com/saeris/valimock#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saeris/valimock.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "packageManager": "yarn@3.6.3",
+  "type": "module",
+  "main": "./dist/cjs/Valimock.js",
+  "module": "./dist/esm/Valimock.js",
+  "types": "./dist/esm/Valimock.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/Valimock.d.ts",
+      "module": "./dist/esm/Valimock.js",
+      "import": "./dist/esm/Valimock.js",
+      "require": {
+        "types": "./dist/cjs/Valimock.d.ts",
+        "default": "./dist/cjs/Valimock.js"
+      },
+      "default": "./dist/esm/Valimock.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "ci": "yarn lint && yarn typecheck && yarn test",
+    "build": "tsup",
+    "lint": "eslint \"./src/**/*.ts\" --cache",
+    "format": "yarn lint --fix",
+    "release": "yarn build && tsx ./scripts/version.ts && changeset publish",
+    "test": "vitest --single-thread",
+    "typecheck": "tsc --noemit",
+    "version": "changeset version"
+  },
+  "dependencies": {
+    "randexp": "^0.5.3"
+  },
+  "peerDependencies": {
+    "@faker-js/faker": "^8.1.0",
+    "valibot": "^0.19.0"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.4.8",
+    "@changesets/cli": "^2.26.2",
+    "@faker-js/faker": "^8.2.0",
+    "@saeris/eslint-config": "^2.5.0",
+    "@types/eslint": "^8.44.4",
+    "@types/node": "20.8.6",
+    "@vitest/coverage-v8": "^0.34.6",
+    "eslint": "^8.51.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-vitest": "^0.3.2",
+    "prettier": "^3.0.3",
+    "tsup": "^7.2.0",
+    "typescript": "5.2.2",
+    "valibot": "^0.19.0",
+    "vitest": "^0.34.6"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@saeris/eslint-config/base",
+      "@saeris/eslint-config/typescript",
+      "@saeris/eslint-config/type-aware"
+    ],
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "settings": {
+      "import/resolver": {
+        "typescript": true,
+        "node": true
+      }
+    },
+    "overrides": [
+      {
+        "files": [
+          "./src/**/*.ts"
+        ],
+        "excludedFiles": "*.spec.ts",
+        "rules": {
+          "import/no-useless-path-segments": [
+            "error",
+            {
+              "noUselessIndex": false
+            }
+          ]
+        }
+      },
+      {
+        "files": [
+          "**/*.spec.ts"
+        ],
+        "env": {
+          "vitest/env": true
+        },
+        "plugins": [
+          "vitest"
+        ],
+        "extends": [
+          "plugin:vitest/recommended"
+        ]
+      }
+    ],
+    "ignorePatterns": [
+      "node_modules",
+      "**/dist/**/*",
+      "*.js",
+      "*.cjs",
+      "*.mjs",
+      "*.d.ts"
+    ]
+  },
+  "prettier": {
+    "printWidth": 80,
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "none",
+    "bracketSpacing": true,
+    "jsxBracketSameLine": false
+  }
+}

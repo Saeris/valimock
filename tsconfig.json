@@ -1,0 +1,30 @@
+{
+  "ts-node": {
+    "transpileOnly": true
+  },
+  "include": ["./src/**/*.*", "./src/**/*.spec.ts"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": true,
+    "sourceMap": true,
+    "lib": ["ESNext"],
+    "types": ["node", "vitest/globals"],
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "isolatedModules": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "importHelpers": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noErrorTruncation": true,
+    "strict": false,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
