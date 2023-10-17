@@ -25,14 +25,12 @@ yarn add -D valimock @faker-js/faker
 
 ```ts
 import { parse, array, union, string, url, number, maxValue } from "valibot";
-import { Valimock } from "../Valimock.js";
-
-const mockSchema = new Valimock().mock;
+import { Valimock } from "valimock";
 
 describe(`example test`, () => {
   it(`should generate valid mock data`, () => {
     const schema = array(union([string([url()]), number([maxValue(20)])]));
-    const result = mockSchema(schema);
+    const result = new Valimock().mock(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 });
