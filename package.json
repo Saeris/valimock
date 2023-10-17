@@ -1,7 +1,7 @@
 {
   "name": "valimock",
   "description": "Generate mock data for Valibot schemas using Faker",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "license": "MIT",
   "author": "Drake Costa <drake@saeris.gg> (https://saeris.gg)",
   "keywords": [
@@ -23,19 +23,19 @@
   },
   "packageManager": "yarn@3.6.3",
   "type": "module",
-  "main": "./dist/cjs/Valimock.js",
-  "module": "./dist/esm/Valimock.js",
-  "types": "./dist/esm/Valimock.d.ts",
+  "main": "./dist/Valimock.js",
+  "module": "./dist/Valimock.js",
+  "types": "./dist/Valimock.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/esm/Valimock.d.ts",
-      "module": "./dist/esm/Valimock.js",
-      "import": "./dist/esm/Valimock.js",
+      "types": "./dist/Valimock.d.ts",
+      "module": "./dist/Valimock.js",
+      "import": "./dist/Valimock.js",
       "require": {
-        "types": "./dist/cjs/Valimock.d.ts",
-        "default": "./dist/cjs/Valimock.js"
+        "types": "./dist/Valimock.d.cts",
+        "default": "./dist/Valimock.cjs"
       },
-      "default": "./dist/esm/Valimock.js"
+      "default": "./dist/Valimock.js"
     },
     "./package.json": "./package.json"
   },
