@@ -23,6 +23,8 @@ yarn add -D valimock @faker-js/faker
 
 ## 🔧 Usage
 
+Import and optionally configure a new instance of the `Valimock` class, then pass along your `valibot` schema to `mock()`, that's it!
+
 ```ts
 import { parse, array, union, string, url, number, maxValue } from "valibot";
 import { Valimock } from "valimock";
@@ -35,6 +37,18 @@ describe(`example test`, () => {
   });
 });
 ```
+
+> [!NOTE]
+>
+> For async schemas, you will need to use `parseAsync()`. Be aware that async schemas generate a `Promise` and may need to be `await`'ed depending on usage.
+>
+> Please see the [`__tests__`](./src/__tests__/) folder for more usage examples of different schema types.
+
+> [!WARNING]
+>
+> At present, not all of `valibot`'s API is fully covered by `valimock`, however, any unimplemented schema type can be handled by a user-supplied map via the `customMocks` configuration option. The schema's `kind` proerty is used as the property key for this map.
+>
+> In the future a table will be provided with API coverage data.
 
 ## 📣 Acknowledgements
 

@@ -50,10 +50,11 @@ export interface ValimockOptions {
    * This is a mapping of field name to mock generator function.
    * This mapping can be used to provide backup mock
    * functions for Schema types not yet implemented.
+   *
    * The functions in this map will only be used if this library
    * is unable to find an appropriate mocking function to use.
    */
-  backupMocks: Record<
+  customMocks: Record<
     string,
     (
       schema: v.BaseSchema | v.BaseSchemaAsync,
@@ -82,7 +83,7 @@ export class Valimock {
     stringMap: undefined,
     recordKeysLength: 1,
     mapEntriesLength: 1,
-    backupMocks: {},
+    customMocks: {},
     // eslint-disable-next-line no-undefined
     mockeryMapper: (
       keyName: string | undefined,
@@ -244,6 +245,10 @@ export class Valimock {
   };
 
   mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
+    schema: T
+  ): v.Output<typeof schema> => this.#mock(schema);
+
+  #mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
     schema: T,
     keyName?: string
   ): v.Output<typeof schema> => {
@@ -258,8 +263,8 @@ export class Valimock {
         }
         return this.#schemas[schema.kind](schema);
       }
-      if (Object.keys(this.options.backupMocks).includes(schema.kind)) {
-        return this.options.backupMocks[schema.kind](schema);
+      if (Object.keys(this.options.customMocks).includes(schema.kind)) {
+        return this.options.customMocks[schema.kind](schema, this.options);
       }
       if (this.options.throwOnUnknownType) {
         throw new MockError(schema.kind);
@@ -293,7 +298,7 @@ export class Valimock {
               ? checks.length
               : this.options.faker.number.int({ min, max })
         },
-        () => this.mock(schema.array.item)
+        () => this.#mock(schema.array.item)
       )
     );
   };
@@ -367,7 +372,7 @@ export class Valimock {
     this.#wrapResult(
       schema,
       schema.intersection.reduce(
-        (hash, entry) => Object.assign(hash, this.mock(entry)),
+        (hash, entry) => Object.assign(hash, this.#mock(entry)),
         {} as v.BaseSchema
       )
     ) as v.Output<typeof schema>;
@@ -383,7 +388,7 @@ export class Valimock {
   ): v.Output<typeof schema> => {
     const result = new Map<v.BaseSchema, v.BaseSchema>();
     while (result.size < this.options.mapEntriesLength) {
-      result.set(this.mock(schema.map.key), this.mock(schema.map.value));
+      result.set(this.#mock(schema.map.key), this.#mock(schema.map.value));
     }
     return this.#wrapResult(schema, result);
   };
@@ -413,14 +418,17 @@ export class Valimock {
       | v.NonOptionalSchema<v.BaseSchema>
       | v.NonOptionalSchemaAsync<v.BaseSchema>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(schema, this.mock(schema.wrapped));
+    this.#wrapResult(schema, this.#mock(schema.wrapped));
 
   #mockNullable = (
     schema: v.NullableSchema<v.BaseSchema> | v.NullableSchemaAsync<v.BaseSchema>
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      this.options.faker.helpers.arrayElement([this.mock(schema.wrapped), null])
+      this.options.faker.helpers.arrayElement([
+        this.#mock(schema.wrapped),
+        null
+      ])
     );
 
   #mockNullish = (
@@ -429,7 +437,7 @@ export class Valimock {
     this.#wrapResult(
       schema,
       this.options.faker.helpers.arrayElement([
-        this.mock(schema.wrapped),
+        this.#mock(schema.wrapped),
         null,
         // eslint-disable-next-line no-undefined
         undefined
@@ -472,7 +480,7 @@ export class Valimock {
       Object.entries(schema.object).reduce<Record<string, v.BaseSchema>>(
         (hash, [key, value]) => ({
           ...hash,
-          [key]: this.mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
+          [key]: this.#mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
         }),
         {}
       )
@@ -484,7 +492,7 @@ export class Valimock {
     this.#wrapResult(
       schema,
       this.options.faker.helpers.arrayElement([
-        this.mock<v.BaseSchema>(schema.wrapped),
+        this.#mock<v.BaseSchema>(schema.wrapped),
         // eslint-disable-next-line no-undefined
         undefined
       ]) ?? schema.default
@@ -500,8 +508,8 @@ export class Valimock {
       schema,
       Object.fromEntries(
         Array.from({ length: this.options.recordKeysLength }, () => [
-          this.mock(schema.record.key),
-          this.mock(schema.record.value)
+          this.#mock(schema.record.key),
+          this.#mock(schema.record.value)
         ])
       ) as v.Output<typeof schema>
     );
@@ -511,7 +519,7 @@ export class Valimock {
       | v.RecursiveSchema<() => v.BaseSchema>
       | v.RecursiveSchemaAsync<() => v.BaseSchema | v.BaseSchemaAsync>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(schema, this.mock(schema.getter()));
+    this.#wrapResult(schema, this.#mock(schema.getter()));
 
   #mockSet = (
     schema: v.SetSchema<v.BaseSchema> | v.SetSchemaAsync<v.BaseSchemaAsync>
@@ -526,7 +534,7 @@ export class Valimock {
     const targetLength = fixed ?? this.options.faker.number.int({ min, max });
     const result = new Set<v.BaseSchema | v.BaseSchemaAsync>();
     while (result.size < targetLength) {
-      result.add(this.mock(schema.set.value));
+      result.add(this.#mock(schema.set.value));
     }
     return this.#wrapResult(schema, result);
   };
@@ -633,7 +641,7 @@ export class Valimock {
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      schema.tuple.items.map((item) => this.mock(item)) as v.Output<
+      schema.tuple.items.map((item) => this.#mock(item)) as v.Output<
         typeof schema
       >
     );
@@ -645,7 +653,7 @@ export class Valimock {
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      this.mock(this.options.faker.helpers.arrayElement([...schema.union]))
+      this.#mock(this.options.faker.helpers.arrayElement([...schema.union]))
     );
 
   #schemas = {
