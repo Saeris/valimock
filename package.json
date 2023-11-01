@@ -68,7 +68,7 @@
     "@faker-js/faker": "^8.2.0",
     "@saeris/eslint-config": "^2.5.0",
     "@types/eslint": "^8.44.4",
-    "@types/node": "20.8.6",
+    "@types/node": "20.8.10",
     "@vitest/coverage-v8": "^0.34.6",
     "eslint": "^8.51.0",
     "eslint-import-resolver-typescript": "^3.6.1",
