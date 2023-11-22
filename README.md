@@ -56,15 +56,17 @@ describe(`example test`, () => {
 
 ### Schemas
 
-|     Any     |   Array    |   Bigint   |     Blob      |     Boolean     |      Date      |      Enum       | Instance |  Intersect   |
-| :---------: | :--------: | :--------: | :-----------: | :-------------: | :------------: | :-------------: | :------: | :----------: |
-|     ❌      |     ✔     |     ✔     |      ➖       |       ✔        |       ⚠       |       ✔        |    ➖    |      ✔      |
-| **Literal** |  **Map**   |  **NaN**   |   **Never**   | **NonNullable** | **NonNullish** | **NonOptional** | **Null** | **Nullable** |
-|     ✔      |     ✔     |     ✔     |      ❌       |       ✔        |       ✔       |       ✔        |    ✔    |      ✔      |
-| **Nullish** | **Number** | **Object** | **Optional**  |  **Picklist**   |   **Record**   |  **Recursive**  | **Set**  | **Special**  |
-|     ✔      |     ⚠     |     ✔     |      ✔       |       ✔        |       ✔       |       ✔        |    ✔    |      ➖      |
-| **String**  | **Symbol** | **Tuple**  | **Undefined** |    **Union**    |  **Unknown**   |   **Variant**   | **Void** |              |
-|     ⚠      |     ➖     |     ✔     |      ✔       |       ✔        |       ❌       |       ❌        |    ❌    |              |
+|      Any       |      Array      |    Bigint     |     Blob      |   Boolean   |    Date     |      Enum       |
+| :------------: | :-------------: | :-----------: | :-----------: | :---------: | :---------: | :-------------: |
+|       ❌       |       ✔        |      ✔       |      ➖       |     ✔      |     ⚠      |       ✔        |
+|  **Instance**  |  **Intersect**  |  **Literal**  |    **Map**    |   **NaN**   |  **Never**  | **NonNullable** |
+|       ➖       |       ✔        |      ✔       |      ✔       |     ✔      |     ❌      |       ✔        |
+| **NonNullish** | **NonOptional** |   **Null**    | **Nullable**  | **Nullish** | **Number**  |   **Object**    |
+|       ✔       |       ✔        |      ✔       |      ✔       |     ✔      |     ⚠      |       ✔        |
+|  **Optional**  |  **Picklist**   |  **Record**   | **Recursive** |   **Set**   | **Special** |   **String**    |
+|       ✔       |       ✔        |      ✔       |      ✔       |     ✔      |     ➖      |       ⚠        |
+|   **Symbol**   |    **Tuple**    | **Undefined** |   **Union**   | **Unknown** | **Variant** |    **Void**     |
+|       ➖       |       ✔        |      ✔       |      ✔       |     ❌      |     ❌      |       ❌        |
 
 ### Validations
 
