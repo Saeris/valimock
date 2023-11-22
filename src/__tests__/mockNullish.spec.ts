@@ -6,8 +6,8 @@ import {
   nullishAsync,
   any,
   string,
-  nullType,
-  undefinedType
+  null_,
+  undefined_
 } from "valibot";
 import { Valimock } from "../Valimock.js";
 
@@ -17,10 +17,10 @@ describe(`mockNullish`, () => {
   it.each([
     nullish(any()),
     nullishAsync(any()),
-    nullish(undefinedType()),
-    nullishAsync(undefinedType()),
-    nullish(nullType()),
-    nullishAsync(nullType()),
+    nullish(undefined_()),
+    nullishAsync(undefined_()),
+    nullish(null_()),
+    nullishAsync(null_()),
     nullish(string()),
     nullishAsync(string()),
     nullish(any(), `foo`),

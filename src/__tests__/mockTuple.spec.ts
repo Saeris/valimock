@@ -26,7 +26,7 @@ describe(`mockTuple`, () => {
       [maxLength(2)]
     )
   ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema); //?
+    const result = mockSchema(schema);
     expect(
       schema.async ? parseAsync(schema, result) : parse(schema, result)
     ).toStrictEqual(result);

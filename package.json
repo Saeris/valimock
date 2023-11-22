@@ -21,7 +21,7 @@
   "engines": {
     "node": ">=18.x"
   },
-  "packageManager": "yarn@3.6.3",
+  "packageManager": "yarn@4.0.2",
   "type": "module",
   "main": "./dist/Valimock.js",
   "module": "./dist/Valimock.js",
@@ -59,24 +59,24 @@
     "randexp": "^0.5.3"
   },
   "peerDependencies": {
-    "@faker-js/faker": "^8.1.0",
-    "valibot": "^0.19.0"
+    "@faker-js/faker": ">= 8.0.0",
+    "valibot": ">= 0.21.0"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.4.8",
     "@changesets/cli": "^2.26.2",
-    "@faker-js/faker": "^8.2.0",
+    "@faker-js/faker": "^8.3.1",
     "@saeris/eslint-config": "^2.5.0",
-    "@types/eslint": "^8.44.4",
-    "@types/node": "20.8.6",
+    "@types/eslint": "^8.44.7",
+    "@types/node": "20.9.4",
     "@vitest/coverage-v8": "^0.34.6",
-    "eslint": "^8.51.0",
+    "eslint": "^8.54.0",
     "eslint-import-resolver-typescript": "^3.6.1",
-    "eslint-plugin-vitest": "^0.3.2",
-    "prettier": "^3.0.3",
-    "tsup": "^7.2.0",
-    "typescript": "5.2.2",
-    "valibot": "^0.19.0",
+    "eslint-plugin-vitest": "^0.3.10",
+    "prettier": "^3.1.0",
+    "tsup": "^8.0.1",
+    "typescript": "5.3.2",
+    "valibot": "^0.21.0",
     "vitest": "^0.34.6"
   },
   "eslintConfig": {

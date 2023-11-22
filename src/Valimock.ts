@@ -4,7 +4,7 @@ import RandExp from "randexp";
 import type * as v from "valibot";
 
 export class MockError extends Error {
-  constructor(public typeName: string) {
+  constructor(public typeName?: string) {
     super(`Unable to generate a mock value for schema ${typeName}.`);
   }
 }
@@ -156,17 +156,23 @@ export class Valimock {
   #getChecks = (
     pipe: v.Pipe<unknown> | v.PipeAsync<unknown> = []
   ): Record<string, unknown> => {
-    const isValidation = (val: unknown): val is v.Validation<unknown> =>
+    const isValidation = (
+      val: unknown
+    ): val is v.BaseValidation<unknown> & {
+      type: string;
+      requirement: unknown;
+    } =>
       typeof val === `object` &&
       val !== null &&
-      `kind` in val &&
+      `type` in val &&
+      `requirement` in val &&
       `message` in val;
 
     return Object.fromEntries(
       [...pipe].reduce<Array<[key: string, requirement: unknown]>>(
         (arr, item) => {
           if (isValidation(item)) {
-            arr.push([item.kind, item.requirement]);
+            arr.push([item.type, item.requirement]);
           }
           return arr;
         },
@@ -181,9 +187,7 @@ export class Valimock {
   ): v.Output<typeof schema> =>
     schema.async ? Promise.resolve(result) : result;
 
-  #getValidEnumValues = <T extends v.NativeEnum>(
-    obj: T
-  ): Array<number | string> =>
+  #getValidEnumValues = <T extends v.Enum>(obj: T): Array<number | string> =>
     Object.entries(obj).reduce<Array<number | string>>((arr, [key, value]) => {
       if (typeof obj[obj[key]] === `number`) {
         arr.push(value);
@@ -244,30 +248,32 @@ export class Valimock {
     }
   };
 
-  mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
+  mock = <T extends { type?: string } & (v.BaseSchema | v.BaseSchemaAsync)>(
     schema: T
   ): v.Output<typeof schema> => this.#mock(schema);
 
-  #mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
+  #mock = <T extends { type?: string } & (v.BaseSchema | v.BaseSchemaAsync)>(
     schema: T,
     keyName?: string
   ): v.Output<typeof schema> => {
     try {
       if (this.options.seed) this.options.faker.seed(this.options.seed);
-      if (Object.keys(this.#schemas).includes(schema.kind)) {
-        if (schema.kind === `string`) {
-          return this.#mockString(
-            schema as v.StringSchema | v.StringSchemaAsync,
-            keyName
-          );
+      if (`type` in schema && typeof schema.type === `string`) {
+        if (Object.keys(this.#schemas).includes(schema.type)) {
+          if (schema.type === `string`) {
+            return this.#mockString(
+              schema as v.StringSchema | v.StringSchemaAsync,
+              keyName
+            );
+          }
+          return this.#schemas[schema.type](schema);
         }
-        return this.#schemas[schema.kind](schema);
-      }
-      if (Object.keys(this.options.customMocks).includes(schema.kind)) {
-        return this.options.customMocks[schema.kind](schema, this.options);
+        if (Object.keys(this.options.customMocks).includes(schema.type)) {
+          return this.options.customMocks[schema.type](schema, this.options);
+        }
       }
       if (this.options.throwOnUnknownType) {
-        throw new MockError(schema.kind);
+        throw new MockError(schema.type);
       }
     } catch (err) {
       if (err instanceof MockError) {
@@ -298,7 +304,7 @@ export class Valimock {
               ? checks.length
               : this.options.faker.number.int({ min, max })
         },
-        () => this.#mock(schema.array.item)
+        () => this.#mock(schema.item)
       )
     );
   };
@@ -356,22 +362,20 @@ export class Valimock {
     return this.#wrapResult(schema, result);
   };
 
-  #mockEnum = (schema: v.EnumSchema<v.Enum>): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement(schema.enum)
-    );
-
-  #mockIntersection = (
-    schema:
-      | v.IntersectionSchema<v.IntersectionOptions>
-      | v.IntersectionSchemaAsync<
-          v.IntersectionOptions | v.IntersectionOptionsAsync
-        >
+  #mockPicklist = (
+    schema: v.PicklistSchema<v.PicklistOptions>
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      schema.intersection.reduce(
+      this.options.faker.helpers.arrayElement(schema.options)
+    );
+
+  #mockIntersect = (
+    schema: v.IntersectSchema<v.IntersectOptions>
+  ): v.Output<typeof schema> =>
+    this.#wrapResult(
+      schema,
+      schema.options.reduce(
         (hash, entry) => Object.assign(hash, this.#mock(entry)),
         {} as v.BaseSchema
       )
@@ -388,7 +392,7 @@ export class Valimock {
   ): v.Output<typeof schema> => {
     const result = new Map<v.BaseSchema, v.BaseSchema>();
     while (result.size < this.options.mapEntriesLength) {
-      result.set(this.#mock(schema.map.key), this.#mock(schema.map.value));
+      result.set(this.#mock(schema.key), this.#mock(schema.value));
     }
     return this.#wrapResult(schema, result);
   };
@@ -397,15 +401,13 @@ export class Valimock {
     schema: v.NanSchema<unknown> | v.NanSchemaAsync<unknown>
   ): v.Output<typeof schema> => this.#wrapResult(schema, NaN);
 
-  #mockNativeEnum = (
-    schema:
-      | v.NativeEnumSchema<v.NativeEnum>
-      | v.NativeEnumSchemaAsync<v.NativeEnum>
+  #mockEnum = (
+    schema: v.EnumSchema<v.Enum> | v.EnumSchemaAsync<v.Enum>
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
       this.options.faker.helpers.arrayElement(
-        this.#getValidEnumValues(schema.nativeEnum)
+        this.#getValidEnumValues(schema.enum)
       )
     );
 
@@ -447,6 +449,10 @@ export class Valimock {
         this.options.faker.helpers.arrayElement([null, undefined])
     );
 
+  #mockNull = (
+    schema: v.NullSchema | v.NullSchemaAsync
+  ): v.Output<typeof schema> => this.#wrapResult(schema, null);
+
   #mockNumber = (
     schema: v.NumberSchema | v.NumberSchemaAsync
   ): v.Output<typeof schema> => {
@@ -465,19 +471,19 @@ export class Valimock {
       typeof checks.value === `number`
         ? checks.value
         : isInteger
-        ? this.options.faker.number.int(bounds)
-        : this.options.faker.number.float(bounds)
+          ? this.options.faker.number.int(bounds)
+          : this.options.faker.number.float(bounds)
     );
   };
 
   #mockObject = (
     schema:
-      | v.ObjectSchema<v.ObjectShape>
-      | v.ObjectSchemaAsync<v.ObjectShapeAsync>
+      | v.ObjectSchema<v.ObjectEntries>
+      | v.ObjectSchemaAsync<v.ObjectEntriesAsync>
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      Object.entries(schema.object).reduce<Record<string, v.BaseSchema>>(
+      Object.entries(schema.entries).reduce<Record<string, v.BaseSchema>>(
         (hash, [key, value]) => ({
           ...hash,
           [key]: this.#mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
@@ -508,8 +514,8 @@ export class Valimock {
       schema,
       Object.fromEntries(
         Array.from({ length: this.options.recordKeysLength }, () => [
-          this.#mock(schema.record.key),
-          this.#mock(schema.record.value)
+          this.#mock(schema.key),
+          this.#mock(schema.value)
         ])
       ) as v.Output<typeof schema>
     );
@@ -534,7 +540,7 @@ export class Valimock {
     const targetLength = fixed ?? this.options.faker.number.int({ min, max });
     const result = new Set<v.BaseSchema | v.BaseSchemaAsync>();
     while (result.size < targetLength) {
-      result.add(this.#mock(schema.set.value));
+      result.add(this.#mock(schema.value));
     }
     return this.#wrapResult(schema, result);
   };
@@ -576,10 +582,10 @@ export class Valimock {
     }
 
     // Next, try to match a supplied Regular Expression
-    const regexCheck = schema.pipe.find(
+    const regexCheck = schema.pipe?.find(
       (check) =>
         (`requirement` in check && check.requirement instanceof RegExp) ||
-        check.kind === `regex`
+        (`type` in check && check.type === `regex`)
     );
     if (
       regexCheck &&
@@ -611,8 +617,11 @@ export class Valimock {
       Object.keys(this.#stringGenerators).find(
         (genKey) =>
           genKey.toLowerCase() === lowerCaseKeyName ||
-          schema.pipe.find(
-            (item) => item.kind.toUpperCase() === genKey.toUpperCase()
+          schema.pipe?.find(
+            (item) =>
+              `type` in item &&
+              typeof item.type === `string` &&
+              item.type.toUpperCase() === genKey.toUpperCase()
           )
       ) ?? null;
 
@@ -637,13 +646,11 @@ export class Valimock {
   };
 
   #mockTuple = (
-    schema: v.TupleSchema<v.TupleShape> | v.TupleSchemaAsync<v.TupleShapeAsync>
+    schema: v.TupleSchema<v.TupleItems> | v.TupleSchemaAsync<v.TupleItemsAsync>
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      schema.tuple.items.map((item) => this.#mock(item)) as v.Output<
-        typeof schema
-      >
+      schema.items.map((item) => this.#mock(item)) as v.Output<typeof schema>
     );
 
   #mockUnion = (
@@ -653,7 +660,16 @@ export class Valimock {
   ): v.Output<typeof schema> =>
     this.#wrapResult(
       schema,
-      this.#mock(this.options.faker.helpers.arrayElement([...schema.union]))
+      this.#mock(this.options.faker.helpers.arrayElement([...schema.options]))
+    );
+
+  #mockUndefined = (
+    schema: v.UndefinedSchema | v.UndefinedSchemaAsync
+  ): v.Output<typeof schema> =>
+    this.#wrapResult(
+      schema,
+      // eslint-disable-next-line no-undefined
+      undefined
     );
 
   #schemas = {
@@ -662,24 +678,26 @@ export class Valimock {
     boolean: this.#mockBoolean,
     date: this.#mockDate,
     enum: this.#mockEnum,
-    intersection: this.#mockIntersection,
+    intersect: this.#mockIntersect,
     literal: this.#mockLiteral,
     map: this.#mockMap,
     nan: this.#mockNaN,
-    native_enum: this.#mockNativeEnum,
     non_nullable: this.#mockRequired,
     non_nullish: this.#mockRequired,
     non_optional: this.#mockRequired,
     nullable: this.#mockNullable,
     nullish: this.#mockNullish,
+    null: this.#mockNull,
     number: this.#mockNumber,
     object: this.#mockObject,
     optional: this.#mockOptional,
+    picklist: this.#mockPicklist,
     record: this.#mockRecord,
     recursive: this.#mockRecursive,
     set: this.#mockSet,
     string: this.#mockString,
     tuple: this.#mockTuple,
-    union: this.#mockUnion
+    union: this.#mockUnion,
+    undefined: this.#mockUndefined
   };
 }

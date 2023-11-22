@@ -6,8 +6,8 @@ import {
   optionalAsync,
   any,
   string,
-  undefinedType,
-  nullType
+  undefined_,
+  null_
 } from "valibot";
 import { Valimock } from "../Valimock.js";
 
@@ -17,10 +17,10 @@ describe(`mockOptional`, () => {
   it.each([
     optional(any()),
     optionalAsync(any()),
-    optional(undefinedType()),
-    optionalAsync(undefinedType()),
-    optional(nullType()),
-    optionalAsync(nullType()),
+    optional(undefined_()),
+    optionalAsync(undefined_()),
+    optional(null_()),
+    optionalAsync(null_()),
     optional(string()),
     optionalAsync(string()),
     optional(any(), `foo`),
