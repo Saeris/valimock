@@ -5,13 +5,19 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockLiteral`, () => {
-  it.each([literal(`foo`), literalAsync(`bar`), literal(6), literalAsync(9)])(
+  it.each([literal(`foo`), literal(6)])(
     `should generate valid mock data (%#)`,
     (schema) => {
       const result = mockSchema(schema);
-      expect(
-        schema.async ? parseAsync(schema, result) : parse(schema, result)
-      ).toStrictEqual(result);
+      expect(parse(schema, result)).toStrictEqual(result);
+    }
+  );
+
+  it.each([literalAsync(`bar`), literalAsync(9)])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
     }
   );
 });

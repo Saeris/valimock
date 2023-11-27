@@ -16,13 +16,21 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockUnion`, () => {
+  it.each([union([string([url()]), number([maxValue(20), integer()])])])(
+    `should generate valid mock data (%#)`,
+    (schema) => {
+      const result = mockSchema(schema);
+      expect(parse(schema, result)).toStrictEqual(result);
+    }
+  );
+
   it.each([
-    union([string([url()]), number([maxValue(20), integer()])]),
     unionAsync([string([url()]), numberAsync([maxValue(20), integer()])])
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

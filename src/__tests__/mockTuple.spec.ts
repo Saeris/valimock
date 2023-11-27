@@ -19,16 +19,23 @@ const mockSchema = new Valimock().mock;
 describe(`mockTuple`, () => {
   it.each([
     tuple([string([url()]), number([maxValue(20), integer()])]),
+    tuple([string([url()]), number([maxValue(20), integer()])], [maxLength(2)])
+  ])(`should generate valid mock data (%#)`, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.each([
     tupleAsync([string([url()]), numberAsync([maxValue(20), integer()])]),
-    tuple([string([url()]), number([maxValue(20), integer()])], [maxLength(2)]),
     tupleAsync(
       [string([url()]), numberAsync([maxValue(20), integer()])],
       [maxLength(2)]
     )
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema); //?
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

@@ -15,15 +15,22 @@ const mockSchema = new Valimock().mock;
 describe(`mockBigint`, () => {
   it.each([
     bigint(),
-    bigintAsync(),
     bigint([minValue(100n), maxValue(200n)]),
-    bigint([value(50n)]),
-    bigintAsync([minValue(100n), maxValue(200n)]),
-    bigintAsync([value(50n)])
+    bigint([value(50n)])
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
+    expect(parse(schema, result)).toStrictEqual(result);
   });
+
+  it.each([
+    bigintAsync(),
+    bigintAsync([minValue(100n), maxValue(200n)]),
+    bigintAsync([value(50n)])
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

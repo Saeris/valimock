@@ -16,15 +16,22 @@ describe(`mockDate`, () => {
 
   it.each([
     date(),
-    dateAsync(),
     date([minValue(requirement)]),
-    date([maxValue(requirement)]),
-    dateAsync([minValue(requirement)]),
-    dateAsync([maxValue(requirement)])
+    date([maxValue(requirement)])
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
+    expect(parse(schema, result)).toStrictEqual(result);
   });
+
+  it.each([
+    dateAsync(),
+    dateAsync([minValue(requirement)]),
+    dateAsync([maxValue(requirement)])
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parse, parseAsync, nullable, nullableAsync, string } from "valibot";
+import { parse, parseAsync, picklist, picklistAsync } from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock().mock;
 
-describe(`mockNullable`, () => {
-  it.each([nullable(string())])(
+describe(`mockPicklist`, () => {
+  it.each([picklist([`foo`, `bar`, `baz`])])(
     `should generate valid mock data (%#)`,
     (schema) => {
       const result = mockSchema(schema);
@@ -13,7 +13,7 @@ describe(`mockNullable`, () => {
     }
   );
 
-  it.each([nullableAsync(string())])(
+  it.each([picklistAsync([`foo`, `bar`, `baz`])])(
     `should generate valid mock data with async validation (%#)`,
     async (schema) => {
       const result = mockSchema(schema);
