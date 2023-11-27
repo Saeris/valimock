@@ -181,12 +181,6 @@ export class Valimock {
     );
   };
 
-  #wrapResult = <T>(
-    schema: v.BaseSchema | v.BaseSchemaAsync,
-    result: T
-  ): v.Output<typeof schema> =>
-    schema.async ? Promise.resolve(result) : result;
-
   #getValidEnumValues = <T extends v.Enum>(obj: T): Array<number | string> =>
     Object.entries(obj).reduce<Array<number | string>>((arr, [key, value]) => {
       if (typeof obj[obj[key]] === `number`) {
@@ -295,17 +289,14 @@ export class Valimock {
       min = max;
     }
 
-    return this.#wrapResult(
-      schema,
-      Array.from<undefined, v.BaseSchema>(
-        {
-          length:
-            typeof checks.length === `number`
-              ? checks.length
-              : this.options.faker.number.int({ min, max })
-        },
-        () => this.#mock(schema.item)
-      )
+    return Array.from<undefined, v.BaseSchema>(
+      {
+        length:
+          typeof checks.length === `number`
+            ? checks.length
+            : this.options.faker.number.int({ min, max })
+      },
+      () => this.#mock(schema.item)
     );
   };
 
@@ -314,21 +305,17 @@ export class Valimock {
   ): v.Output<typeof schema> => {
     const checks = this.#getChecks(schema.pipe);
 
-    return this.#wrapResult(
-      schema,
-      typeof checks.value === `number` || typeof checks.value === `bigint`
-        ? BigInt(checks.value)
-        : this.options.faker.number.bigInt({
-            min: checks.min_value as number | undefined,
-            max: checks.max_value as number | undefined
-          })
-    );
+    return typeof checks.value === `number` || typeof checks.value === `bigint`
+      ? BigInt(checks.value)
+      : this.options.faker.number.bigInt({
+          min: checks.min_value as number | undefined,
+          max: checks.max_value as number | undefined
+        });
   };
 
   #mockBoolean = (
     schema: v.BooleanSchema | v.BooleanSchemaAsync
-  ): v.Output<typeof schema> =>
-    this.#wrapResult(schema, this.options.faker.datatype.boolean());
+  ): v.Output<typeof schema> => this.options.faker.datatype.boolean();
 
   #mockDate = (
     schema: v.DateSchema | v.DateSchemaAsync
@@ -336,7 +323,7 @@ export class Valimock {
     const checks = this.#getChecks(schema.pipe);
 
     if (checks.value instanceof Date) {
-      return this.#wrapResult(schema, checks.value);
+      return checks.value;
     }
 
     const bounds = {
@@ -359,31 +346,25 @@ export class Valimock {
       result = this.options.faker.date.recent({ refDate: bounds.max });
     }
 
-    return this.#wrapResult(schema, result);
+    return result;
   };
 
   #mockPicklist = (
     schema: v.PicklistSchema<v.PicklistOptions>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement(schema.options)
-    );
+    this.options.faker.helpers.arrayElement(schema.options);
 
   #mockIntersect = (
     schema: v.IntersectSchema<v.IntersectOptions>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      schema.options.reduce(
-        (hash, entry) => Object.assign(hash, this.#mock(entry)),
-        {} as v.BaseSchema
-      )
+    schema.options.reduce(
+      (hash, entry) => Object.assign(hash, this.#mock(entry)),
+      {} as v.BaseSchema
     ) as v.Output<typeof schema>;
 
   #mockLiteral = (
     schema: v.LiteralSchema<v.Literal> | v.LiteralSchemaAsync<v.Literal>
-  ): v.Output<typeof schema> => this.#wrapResult(schema, schema.literal);
+  ): v.Output<typeof schema> => schema.literal;
 
   #mockMap = (
     schema:
@@ -394,21 +375,18 @@ export class Valimock {
     while (result.size < this.options.mapEntriesLength) {
       result.set(this.#mock(schema.key), this.#mock(schema.value));
     }
-    return this.#wrapResult(schema, result);
+    return result;
   };
 
   #mockNaN = (
     schema: v.NanSchema<unknown> | v.NanSchemaAsync<unknown>
-  ): v.Output<typeof schema> => this.#wrapResult(schema, NaN);
+  ): v.Output<typeof schema> => NaN;
 
   #mockEnum = (
     schema: v.EnumSchema<v.Enum> | v.EnumSchemaAsync<v.Enum>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement(
-        this.#getValidEnumValues(schema.enum)
-      )
+    this.options.faker.helpers.arrayElement(
+      this.#getValidEnumValues(schema.enum)
     );
 
   #mockRequired = (
@@ -419,39 +397,29 @@ export class Valimock {
       | v.NonNullishSchemaAsync<v.BaseSchema>
       | v.NonOptionalSchema<v.BaseSchema>
       | v.NonOptionalSchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> =>
-    this.#wrapResult(schema, this.#mock(schema.wrapped));
+  ): v.Output<typeof schema> => this.#mock(schema.wrapped);
 
   #mockNullable = (
     schema: v.NullableSchema<v.BaseSchema> | v.NullableSchemaAsync<v.BaseSchema>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement([
-        this.#mock(schema.wrapped),
-        null
-      ])
-    );
+    this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null]);
 
   #mockNullish = (
     schema: v.NullishSchema<v.BaseSchema> | v.NullishSchemaAsync<v.BaseSchema>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement([
-        this.#mock(schema.wrapped),
-        null,
-        // eslint-disable-next-line no-undefined
-        undefined
-      ]) ??
-        schema.default ??
-        // eslint-disable-next-line no-undefined
-        this.options.faker.helpers.arrayElement([null, undefined])
-    );
+    this.options.faker.helpers.arrayElement([
+      this.#mock(schema.wrapped),
+      null,
+      // eslint-disable-next-line no-undefined
+      undefined
+    ]) ??
+    schema.default ??
+    // eslint-disable-next-line no-undefined
+    this.options.faker.helpers.arrayElement([null, undefined]);
 
   #mockNull = (
     schema: v.NullSchema | v.NullSchemaAsync
-  ): v.Output<typeof schema> => this.#wrapResult(schema, null);
+  ): v.Output<typeof schema> => null;
 
   #mockNumber = (
     schema: v.NumberSchema | v.NumberSchemaAsync
@@ -466,14 +434,11 @@ export class Valimock {
         (typeof checks.min_value === `number` ? checks.min_value + 1 : 5)
     };
 
-    return this.#wrapResult(
-      schema,
-      typeof checks.value === `number`
-        ? checks.value
-        : isInteger
-          ? this.options.faker.number.int(bounds)
-          : this.options.faker.number.float(bounds)
-    );
+    return typeof checks.value === `number`
+      ? checks.value
+      : isInteger
+        ? this.options.faker.number.int(bounds)
+        : this.options.faker.number.float(bounds);
   };
 
   #mockObject = (
@@ -481,28 +446,22 @@ export class Valimock {
       | v.ObjectSchema<v.ObjectEntries>
       | v.ObjectSchemaAsync<v.ObjectEntriesAsync>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      Object.entries(schema.entries).reduce<Record<string, v.BaseSchema>>(
-        (hash, [key, value]) => ({
-          ...hash,
-          [key]: this.#mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
-        }),
-        {}
-      )
+    Object.entries(schema.entries).reduce<Record<string, v.BaseSchema>>(
+      (hash, [key, value]) => ({
+        ...hash,
+        [key]: this.#mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
+      }),
+      {}
     );
 
   #mockOptional = (
     schema: v.OptionalSchema<v.BaseSchema> | v.OptionalSchemaAsync<v.BaseSchema>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.options.faker.helpers.arrayElement([
-        this.#mock<v.BaseSchema>(schema.wrapped),
-        // eslint-disable-next-line no-undefined
-        undefined
-      ]) ?? schema.default
-    );
+    this.options.faker.helpers.arrayElement([
+      this.#mock<v.BaseSchema>(schema.wrapped),
+      // eslint-disable-next-line no-undefined
+      undefined
+    ]) ?? schema.default;
 
   #mockRecord = <
     Key extends v.RecordKey = v.RecordKey,
@@ -510,22 +469,18 @@ export class Valimock {
   >(
     schema: v.RecordSchema<Key, Value> | v.RecordSchemaAsync<Key, Value>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      Object.fromEntries(
-        Array.from({ length: this.options.recordKeysLength }, () => [
-          this.#mock(schema.key),
-          this.#mock(schema.value)
-        ])
-      ) as v.Output<typeof schema>
-    );
+    Object.fromEntries(
+      Array.from({ length: this.options.recordKeysLength }, () => [
+        this.#mock(schema.key),
+        this.#mock(schema.value)
+      ])
+    ) as v.Output<typeof schema>;
 
   #mockRecursive = (
     schema:
       | v.RecursiveSchema<() => v.BaseSchema>
       | v.RecursiveSchemaAsync<() => v.BaseSchema | v.BaseSchemaAsync>
-  ): v.Output<typeof schema> =>
-    this.#wrapResult(schema, this.#mock(schema.getter()));
+  ): v.Output<typeof schema> => this.#mock(schema.getter());
 
   #mockSet = (
     schema: v.SetSchema<v.BaseSchema> | v.SetSchemaAsync<v.BaseSchemaAsync>
@@ -542,7 +497,7 @@ export class Valimock {
     while (result.size < targetLength) {
       result.add(this.#mock(schema.value));
     }
-    return this.#wrapResult(schema, result);
+    return result;
   };
 
   #mockString = (
@@ -575,10 +530,7 @@ export class Valimock {
       Object.keys(this.#stringValidations).includes(key)
     );
     if (typeof supportedValidation === `string`) {
-      return this.#wrapResult(
-        schema,
-        this.#stringValidations[supportedValidation]()
-      );
+      return this.#stringValidations[supportedValidation]();
     }
 
     // Next, try to match a supplied Regular Expression
@@ -597,7 +549,7 @@ export class Valimock {
       generator.randInt = (min: number, max: number): number =>
         this.options.faker.number.int({ min, max });
       generator.max = bounds.max;
-      return this.#wrapResult(schema, generator.gen());
+      return generator.gen();
     }
 
     // Then try to match to a user-defined custom string
@@ -606,7 +558,7 @@ export class Valimock {
       const generator = this.options.stringMap[keyName];
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (generator) {
-        return this.#wrapResult(schema, generator());
+        return generator();
       }
     }
 
@@ -642,35 +594,26 @@ export class Valimock {
       val += this.options.faker.string.alpha(delta);
     }
 
-    return this.#wrapResult(schema, val.slice(0, bounds.max));
+    return val.slice(0, bounds.max);
   };
 
   #mockTuple = (
     schema: v.TupleSchema<v.TupleItems> | v.TupleSchemaAsync<v.TupleItemsAsync>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      schema.items.map((item) => this.#mock(item)) as v.Output<typeof schema>
-    );
+    schema.items.map((item) => this.#mock(item)) as v.Output<typeof schema>;
 
   #mockUnion = (
     schema:
       | v.UnionSchema<v.UnionOptions>
       | v.UnionSchemaAsync<v.UnionOptions | v.UnionOptionsAsync>
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      this.#mock(this.options.faker.helpers.arrayElement([...schema.options]))
-    );
+    this.#mock(this.options.faker.helpers.arrayElement([...schema.options]));
 
   #mockUndefined = (
     schema: v.UndefinedSchema | v.UndefinedSchemaAsync
   ): v.Output<typeof schema> =>
-    this.#wrapResult(
-      schema,
-      // eslint-disable-next-line no-undefined
-      undefined
-    );
+    // eslint-disable-next-line no-undefined
+    undefined;
 
   #schemas = {
     array: this.#mockArray,

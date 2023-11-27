@@ -31,7 +31,6 @@ const mockSchema = new Valimock().mock;
 describe(`mockString`, () => {
   it.each([
     string(),
-    stringAsync(),
     string([cuid2()]),
     string([email()]),
     string([emoji()]),
@@ -51,19 +50,27 @@ describe(`mockString`, () => {
     string([minLength(4)]),
     string([maxLength(16)]),
     string([length(4)]),
+    string([minLength(4)]),
+    string([maxLength(16)]),
+    string([length(4)])
+  ])(`should generate valid mock data (%#)`, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.each([
+    stringAsync(),
     stringAsync([minLength(4)]),
     stringAsync([maxLength(16)]),
     stringAsync([length(4)]),
-    string([minLength(4)]),
-    string([maxLength(16)]),
-    string([length(4)]),
     stringAsync([minLength(4)]),
     stringAsync([maxLength(16)]),
     stringAsync([length(4)])
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

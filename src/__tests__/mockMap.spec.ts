@@ -22,7 +22,13 @@ describe(`mockMap`, () => {
         name: string([minLength(2), maxLength(16)]),
         city: string([minLength(2), maxLength(24)])
       })
-    ),
+    )
+  ])(`should generate valid mock data (%#)`, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.each([
     mapAsync(
       string([email()]),
       object({
@@ -30,10 +36,11 @@ describe(`mockMap`, () => {
         city: string([minLength(2), maxLength(24)])
       })
     )
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

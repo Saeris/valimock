@@ -16,23 +16,30 @@ const mockSchema = new Valimock().mock;
 describe(`mockNumber`, () => {
   it.each([
     number(),
-    numberAsync(),
     number([minValue(2)]),
     number([maxValue(10)]),
     number([value(5)]),
+    number([minValue(2), integer()]),
+    number([maxValue(10), integer()]),
+    number([value(5), integer()])
+  ])(`should generate valid mock data (%#)`, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.each([
+    numberAsync(),
     numberAsync([minValue(2)]),
     numberAsync([maxValue(10)]),
     numberAsync([value(5)]),
-    number([minValue(2), integer()]),
-    number([maxValue(10), integer()]),
-    number([value(5), integer()]),
     numberAsync([minValue(2), integer()]),
     numberAsync([maxValue(10), integer()]),
     numberAsync([value(5), integer()])
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

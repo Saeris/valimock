@@ -16,25 +16,32 @@ const mockSchema = new Valimock().mock;
 describe(`mockOptional`, () => {
   it.each([
     optional(any()),
-    optionalAsync(any()),
     optional(undefined_()),
-    optionalAsync(undefined_()),
     optional(null_()),
-    optionalAsync(null_()),
     optional(string()),
-    optionalAsync(string()),
     optional(any(), `foo`),
-    optionalAsync(any(), `foo`),
     optional(any(), `foo`),
-    optionalAsync(any(), `foo`),
     optional(string(), `foo`),
-    optionalAsync(string(), `foo`),
-    optional(string(), `foo`),
-    optionalAsync(string(), `foo`)
+    optional(string(), `foo`)
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
+    expect(parse(schema, result)).toStrictEqual(result);
   });
+
+  it.each([
+    optionalAsync(any()),
+    optionalAsync(undefined_()),
+    optionalAsync(null_()),
+    optionalAsync(string()),
+    optionalAsync(any(), `foo`),
+    optionalAsync(any(), `foo`),
+    optionalAsync(string(), `foo`),
+    optionalAsync(string(), `foo`)
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

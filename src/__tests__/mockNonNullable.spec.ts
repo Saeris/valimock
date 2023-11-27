@@ -11,15 +11,19 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockNonNullable`, () => {
-  it.each([
-    nonNullable(string()),
-    nonNullableAsync(string()),
-    nonNullable(string()),
-    nonNullableAsync(string())
-  ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
-  });
+  it.each([nonNullable(string())])(
+    `should generate valid mock data (%#)`,
+    (schema) => {
+      const result = mockSchema(schema);
+      expect(parse(schema, result)).toStrictEqual(result);
+    }
+  );
+
+  it.each([nonNullableAsync(string())])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    }
+  );
 });

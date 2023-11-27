@@ -8,8 +8,7 @@ import {
   email,
   maxLength,
   minLength,
-  parse,
-  parseAsync
+  parse
 } from "valibot";
 import { Valimock } from "../Valimock.js";
 
@@ -37,8 +36,6 @@ describe(`mockIntersect`, () => {
     */
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
-    expect(
-      schema.async ? parseAsync(schema, result) : parse(schema, result)
-    ).toStrictEqual(result);
+    expect(parse(schema, result)).toStrictEqual(result);
   });
 });

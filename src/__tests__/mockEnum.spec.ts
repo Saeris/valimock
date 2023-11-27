@@ -12,13 +12,16 @@ describe(`mockEnum`, () => {
     REJECTED = 3
   }
 
-  it.each([enum_(States), enumAsync(States)])(
-    `should generate valid mock data (%#)`,
-    (schema) => {
+  it.each([enum_(States)])(`should generate valid mock data (%#)`, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.each([enumAsync(States)])(
+    `should generate valid mock data with async validation (%#)`,
+    async (schema) => {
       const result = mockSchema(schema);
-      expect(
-        schema.async ? parseAsync(schema, result) : parse(schema, result)
-      ).toStrictEqual(result);
+      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
     }
   );
 });
