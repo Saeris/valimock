@@ -52,8 +52,7 @@
     "format": "yarn lint --fix",
     "release": "yarn build && tsx ./scripts/version.ts && changeset publish",
     "test": "vitest --single-thread",
-    "typecheck": "tsc --noemit",
-    "version": "changeset version"
+    "typecheck": "tsc --noemit"
   },
   "dependencies": {
     "randexp": "^0.5.3"
