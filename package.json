@@ -50,7 +50,7 @@
     "build": "tsup",
     "lint": "eslint \"./src/**/*.ts\" --cache",
     "format": "yarn lint --fix",
-    "release": "yarn build && tsx ./scripts/version.ts && changeset publish",
+    "release": "yarn build && changeset publish",
     "test": "vitest --single-thread",
     "typecheck": "tsc --noemit"
   },
