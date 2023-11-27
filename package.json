@@ -1,7 +1,7 @@
 {
   "name": "valimock",
   "description": "Generate mock data for Valibot schemas using Faker",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "author": "Drake Costa <drake@saeris.gg> (https://saeris.gg)",
   "keywords": [
