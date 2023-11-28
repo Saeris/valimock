@@ -182,12 +182,15 @@ export class Valimock {
   };
 
   #getValidEnumValues = <T extends v.Enum>(obj: T): Array<number | string> =>
-    Object.entries(obj).reduce<Array<number | string>>((arr, [key, value]) => {
-      if (typeof obj[obj[key]] === `number`) {
-        arr.push(value);
-      }
-      return arr;
-    }, []);
+    Object.values(
+      Object.entries(obj).reduce(
+        (hash, [key]) =>
+          typeof obj[obj[key]] === `number`
+            ? hash
+            : Object.assign(hash, { [key]: obj[key] }),
+        {}
+      )
+    );
 
   #findMatchingFaker = (keyName?: string): FakerFunction | undefined => {
     if (typeof keyName === `undefined`) return;
