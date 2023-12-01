@@ -1059,12 +1059,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:20.10.0":
-  version: 20.10.0
-  resolution: "@types/node@npm:20.10.0"
+"@types/node@npm:20.10.1":
+  version: 20.10.1
+  resolution: "@types/node@npm:20.10.1"
   dependencies:
     undici-types: "npm:~5.26.4"
-  checksum: c7d5ddbdbf3491e2363135c9611eb6bfae90eda2957279237fa232bcb29cd0df1cc3ee149d6de9915b754262a531ee2d57d33c9ecd58d763e8ad4856113822f3
+  checksum: 703c3cc5bdb2818a16f87019fe4072bfd66489bb300338970260c5b84dd2129595995c41b28773c3b7d9d1a64f36fec59a741629ec466f2aeddad7a9d0c027ac
   languageName: node
   linkType: hard
 
@@ -6232,7 +6232,7 @@ __metadata:
     "@faker-js/faker": "npm:^8.3.1"
     "@saeris/eslint-config": "npm:^2.5.0"
     "@types/eslint": "npm:^8.44.7"
-    "@types/node": "npm:20.10.0"
+    "@types/node": "npm:20.10.1"
     "@vitest/coverage-v8": "npm:^0.34.6"
     eslint: "npm:^8.54.0"
     eslint-import-resolver-typescript: "npm:^3.6.1"
