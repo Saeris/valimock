@@ -184,10 +184,10 @@ export class Valimock {
   #getValidEnumValues = <T extends v.Enum>(obj: T): Array<number | string> =>
     Object.values(
       Object.entries(obj).reduce(
-        (hash, [key]) =>
-          typeof obj[obj[key]] === `number`
+        (hash, [key, value]) =>
+          typeof obj[value] === `number`
             ? hash
-            : Object.assign(hash, { [key]: obj[key] }),
+            : Object.assign(hash, { [key]: value }),
         {}
       )
     );
