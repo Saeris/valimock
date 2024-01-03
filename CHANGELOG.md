@@ -1,5 +1,11 @@
 # valimock
 
+## 0.1.2
+
+### Patch Changes
+
+- [`1b4a3ce`](https://github.com/Saeris/valimock/commit/1b4a3ce8ecc796d5a2a4fd1a6d8b212efbdde4f0) Thanks [@Saeris](https://github.com/Saeris)! - Upgrade Dependencies
+
 ## 0.1.1
 
 ### Patch Changes
