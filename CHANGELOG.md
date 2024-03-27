@@ -1,5 +1,11 @@
 # valimock
 
+## 0.1.3
+
+### Patch Changes
+
+- [`60b9bed`](https://github.com/Saeris/valimock/commit/60b9bedc477dd2356a4f1439e3aa97fa042c94d3) Thanks [@Saeris](https://github.com/Saeris)! - Update Valibot min version, Fix tests for intersect schema
+
 ## 0.1.2
 
 ### Patch Changes
