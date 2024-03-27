@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/class-methods-use-this */
+/* eslint-disable no-undefined */
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import RandExp from "randexp";
-import type * as v from "valibot";
+import * as v from "valibot";
 
 export class MockError extends Error {
   constructor(public typeName?: string) {
@@ -76,15 +78,12 @@ export interface ValimockOptions {
 export class Valimock {
   options: ValimockOptions = {
     faker: defaultFaker,
-    // eslint-disable-next-line no-undefined
     seed: undefined,
     throwOnUnknownType: false,
-    // eslint-disable-next-line no-undefined
     stringMap: undefined,
     recordKeysLength: 1,
     mapEntriesLength: 1,
     customMocks: {},
-    // eslint-disable-next-line no-undefined
     mockeryMapper: (
       keyName: string | undefined,
       fakerInstance: Faker
@@ -245,29 +244,32 @@ export class Valimock {
     }
   };
 
-  mock = <T extends { type?: string } & (v.BaseSchema | v.BaseSchemaAsync)>(
+  mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
     schema: T
   ): v.Output<typeof schema> => this.#mock(schema);
 
-  #mock = <T extends { type?: string } & (v.BaseSchema | v.BaseSchemaAsync)>(
+  #mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
     schema: T,
     keyName?: string
   ): v.Output<typeof schema> => {
     try {
       if (this.options.seed) this.options.faker.seed(this.options.seed);
-      if (`type` in schema && typeof schema.type === `string`) {
-        if (Object.keys(this.#schemas).includes(schema.type)) {
-          if (schema.type === `string`) {
-            return this.#mockString(
-              schema as v.StringSchema | v.StringSchemaAsync,
-              keyName
-            );
-          }
-          return this.#schemas[schema.type](schema);
-        }
-        if (Object.keys(this.options.customMocks).includes(schema.type)) {
-          return this.options.customMocks[schema.type](schema, this.options);
-        }
+      if (
+        v.isOfType<
+          `string`,
+          | v.BaseSchema
+          | v.BaseSchemaAsync
+          | v.StringSchema
+          | v.StringSchemaAsync
+        >(`string`, schema)
+      ) {
+        return this.#mockString(schema, keyName);
+      }
+      if (Object.keys(this.#schemas).includes(schema.type)) {
+        return this.#schemas[schema.type](schema);
+      }
+      if (Object.keys(this.options.customMocks).includes(schema.type)) {
+        return this.options.customMocks[schema.type](schema, this.options);
       }
       if (this.options.throwOnUnknownType) {
         throw new MockError(schema.type);
@@ -362,6 +364,7 @@ export class Valimock {
   ): v.Output<typeof schema> =>
     schema.options.reduce(
       (hash, entry) => Object.assign(hash, this.#mock(entry)),
+      // eslint-disable-next-line @typescript-eslint/prefer-reduce-type-parameter
       {} as v.BaseSchema
     ) as v.Output<typeof schema>;
 
@@ -417,7 +420,6 @@ export class Valimock {
       undefined
     ]) ??
     schema.default ??
-    // eslint-disable-next-line no-undefined
     this.options.faker.helpers.arrayElement([null, undefined]);
 
   #mockNull = (
@@ -481,8 +483,8 @@ export class Valimock {
 
   #mockRecursive = (
     schema:
-      | v.RecursiveSchema<() => v.BaseSchema>
-      | v.RecursiveSchemaAsync<() => v.BaseSchema | v.BaseSchemaAsync>
+      | v.LazySchema<() => v.BaseSchema>
+      | v.LazySchemaAsync<() => v.BaseSchema | v.BaseSchemaAsync>
   ): v.Output<typeof schema> => this.#mock(schema.getter());
 
   #mockSet = (
@@ -540,7 +542,7 @@ export class Valimock {
     const regexCheck = schema.pipe?.find(
       (check) =>
         (`requirement` in check && check.requirement instanceof RegExp) ||
-        (`type` in check && check.type === `regex`)
+        check.type === `regex`
     );
     if (
       regexCheck &&
@@ -574,7 +576,6 @@ export class Valimock {
           genKey.toLowerCase() === lowerCaseKeyName ||
           schema.pipe?.find(
             (item) =>
-              `type` in item &&
               typeof item.type === `string` &&
               item.type.toUpperCase() === genKey.toUpperCase()
           )
@@ -614,9 +615,7 @@ export class Valimock {
 
   #mockUndefined = (
     schema: v.UndefinedSchema | v.UndefinedSchemaAsync
-  ): v.Output<typeof schema> =>
-    // eslint-disable-next-line no-undefined
-    undefined;
+  ): v.Output<typeof schema> => undefined;
 
   #schemas = {
     array: this.#mockArray,
