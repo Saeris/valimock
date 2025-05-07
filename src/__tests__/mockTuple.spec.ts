@@ -34,7 +34,7 @@ describe(`mockTuple`, () => {
       pipe(string(), url()),
       pipeAsync(number(), maxValue(20), integer())
     ]),
-    pipe(
+    pipeAsync(
       tupleAsync([
         pipe(string(), url()),
         pipeAsync(number(), maxValue(20), integer())
