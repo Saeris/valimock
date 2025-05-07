@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   parse,
   parseAsync,
   string,
-  stringAsync,
   maxLength,
   minLength,
   length,
@@ -31,41 +32,40 @@ const mockSchema = new Valimock().mock;
 describe(`mockString`, () => {
   it.each([
     string(),
-    string([cuid2()]),
-    string([email()]),
-    string([emoji()]),
-    string([imei()]),
-    string([ip()]),
-    string([ipv4()]),
-    string([ipv6()]),
-    string([isoDate()]),
-    string([isoDateTime()]),
-    string([isoTime()]),
-    string([isoTimeSecond()]),
-    string([isoTimestamp()]),
-    string([isoWeek()]),
-    string([ulid()]),
-    string([url()]),
-    string([uuid()]),
-    string([minLength(4)]),
-    string([maxLength(16)]),
-    string([length(4)]),
-    string([minLength(4)]),
-    string([maxLength(16)]),
-    string([length(4)])
+    pipe(string(), cuid2()),
+    pipe(string(), email()),
+    pipe(string(), emoji()),
+    pipe(string(), imei()),
+    pipe(string(), ip()),
+    pipe(string(), ipv4()),
+    pipe(string(), ipv6()),
+    pipe(string(), isoDate()),
+    pipe(string(), isoDateTime()),
+    pipe(string(), isoTime()),
+    pipe(string(), isoTimeSecond()),
+    pipe(string(), isoTimestamp()),
+    pipe(string(), isoWeek()),
+    pipe(string(), ulid()),
+    pipe(string(), url()),
+    pipe(string(), uuid()),
+    pipe(string(), minLength(4)),
+    pipe(string(), maxLength(16)),
+    pipe(string(), length(4)),
+    pipe(string(), minLength(4)),
+    pipe(string(), maxLength(16)),
+    pipe(string(), length(4))
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
   it.each([
-    stringAsync(),
-    stringAsync([minLength(4)]),
-    stringAsync([maxLength(16)]),
-    stringAsync([length(4)]),
-    stringAsync([minLength(4)]),
-    stringAsync([maxLength(16)]),
-    stringAsync([length(4)])
+    pipeAsync(string(), minLength(4)),
+    pipeAsync(string(), maxLength(16)),
+    pipeAsync(string(), length(4)),
+    pipeAsync(string(), minLength(4)),
+    pipeAsync(string(), maxLength(16)),
+    pipeAsync(string(), length(4))
   ])(
     `should generate valid mock data with async validation (%#)`,
     async (schema) => {

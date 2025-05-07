@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/prefer-literal-enum-member */
 /* eslint-disable no-bitwise */
 import { describe, expect, it } from "vitest";
-import { parse, parseAsync, enum_, enumAsync } from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock().mock;
@@ -33,24 +33,11 @@ describe(`mockEnum`, () => {
     GREEN
   }
 
-  it.each([enum_(States), enum_(Flags), enum_(Features), enum_(Status)])(
+  it.each([v.enum(States), v.enum(Flags), v.enum(Features), v.enum(Status)])(
     `should generate valid mock data (%#)`,
     (schema) => {
       const result = mockSchema(schema);
-      expect(parse(schema, result)).toStrictEqual(result);
-    }
-  );
-
-  it.each([
-    enumAsync(States),
-    enumAsync(Flags),
-    enumAsync(Features),
-    enumAsync(Status)
-  ])(
-    `should generate valid mock data with async validation (%#)`,
-    async (schema) => {
-      const result = mockSchema(schema);
-      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+      expect(v.parse(schema, result)).toStrictEqual(result);
     }
   );
 });

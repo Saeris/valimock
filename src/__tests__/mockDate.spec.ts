@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   parse,
   parseAsync,
   date,
-  dateAsync,
+  value,
   minValue,
   maxValue
 } from "valibot";
@@ -16,17 +18,17 @@ describe(`mockDate`, () => {
 
   it.each([
     date(),
-    date([minValue(requirement)]),
-    date([maxValue(requirement)])
+    pipe(date(), value(new Date(`2025-05-07T11:41:17.000Z`))),
+    pipe(date(), minValue(requirement)),
+    pipe(date(), maxValue(requirement))
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
   it.each([
-    dateAsync(),
-    dateAsync([minValue(requirement)]),
-    dateAsync([maxValue(requirement)])
+    pipeAsync(date(), minValue(requirement)),
+    pipeAsync(date(), maxValue(requirement))
   ])(
     `should generate valid mock data with async validation (%#)`,
     async (schema) => {

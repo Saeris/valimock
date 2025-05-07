@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   literal,
   number,
   object,
   objectAsync,
   string,
   union,
+  unionAsync,
   parse,
   parseAsync,
   integer,
@@ -21,15 +24,15 @@ const mockSchema = new Valimock().mock;
 describe(`mockObject`, () => {
   it.each([
     object({
-      name: string([minLength(2), maxLength(32)]),
+      name: pipe(string(), minLength(2), maxLength(32)),
       address: object({
         city: union([
           literal(`San Francisco`),
           literal(`Portland`),
           literal(`Seattle`),
-          string([minLength(2)])
+          pipe(string(), minLength(2))
         ]),
-        postalCode: number([maxValue(99999), integer(), minValue(0)])
+        postalCode: pipe(number(), maxValue(99999), integer(), minValue(0))
       })
     })
   ])(`should generate valid mock data (%#)`, (schema) => {
@@ -39,15 +42,15 @@ describe(`mockObject`, () => {
 
   it.each([
     objectAsync({
-      name: string([minLength(2), maxLength(32)]),
-      address: object({
-        city: union([
+      name: pipeAsync(string(), minLength(2), maxLength(32)),
+      address: objectAsync({
+        city: unionAsync([
           literal(`San Francisco`),
           literal(`Portland`),
           literal(`Seattle`),
-          string([minLength(2)])
+          pipeAsync(string(), minLength(2))
         ]),
-        postalCode: number([maxValue(99999), integer(), minValue(0)])
+        postalCode: pipeAsync(number(), maxValue(99999), integer(), minValue(0))
       })
     })
   ])(
