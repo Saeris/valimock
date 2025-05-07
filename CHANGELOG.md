@@ -1,5 +1,11 @@
 # valimock
 
+## 1.1.0
+
+### Minor Changes
+
+- [#42](https://github.com/Saeris/valimock/pull/42) [`7078d1f`](https://github.com/Saeris/valimock/commit/7078d1f752c11578bbf5dbe13a81aa1551eb5cfb) Thanks [@Saeris](https://github.com/Saeris)! - Support Valibot v1.1.0
+
 ## 0.1.3
 
 ### Patch Changes
