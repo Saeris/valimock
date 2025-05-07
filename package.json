@@ -21,7 +21,7 @@
   "engines": {
     "node": ">=18.x"
   },
-  "packageManager": "yarn@4.1.1",
+  "packageManager": "yarn@4.9.1",
   "type": "module",
   "main": "./dist/Valimock.js",
   "module": "./dist/Valimock.js",
@@ -32,10 +32,6 @@
       "import": {
         "types": "./dist/Valimock.d.ts",
         "default": "./dist/Valimock.js"
-      },
-      "require": {
-        "types": "./dist/Valimock.d.cts",
-        "default": "./dist/Valimock.cjs"
       },
       "default": "./dist/Valimock.js"
     },
