@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   parse,
   parseAsync,
   maxValue,
   bigint,
   minValue,
-  value,
-  bigintAsync
+  value
 } from "valibot";
 import { Valimock } from "../Valimock.js";
 
@@ -15,17 +16,16 @@ const mockSchema = new Valimock().mock;
 describe(`mockBigint`, () => {
   it.each([
     bigint(),
-    bigint([minValue(100n), maxValue(200n)]),
-    bigint([value(50n)])
+    pipe(bigint(), minValue(100n), maxValue(200n)),
+    pipe(bigint(), value(50n))
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
   it.each([
-    bigintAsync(),
-    bigintAsync([minValue(100n), maxValue(200n)]),
-    bigintAsync([value(50n)])
+    pipeAsync(bigint(), minValue(100n), maxValue(200n)),
+    pipeAsync(bigint(), value(50n))
   ])(
     `should generate valid mock data with async validation (%#)`,
     async (schema) => {

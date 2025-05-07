@@ -5,6 +5,38 @@ import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import RandExp from "randexp";
 import * as v from "valibot";
 
+type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
+
+type GenericPipe = [v.GenericSchema, ...v.GenericPipeItem[]];
+
+type GenericSchemaWithPipe = v.SchemaWithPipe<GenericPipe>;
+
+type GenericPipeAsync = [
+  v.GenericSchema | v.GenericSchemaAsync,
+  ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>
+];
+
+type GenericSchemaWithPipeAsync = v.SchemaWithPipeAsync<GenericPipeAsync>;
+
+type SyncSchema = GenericSchemaWithPipe | v.GenericSchema;
+
+type Schema =
+  | GenericSchemaWithPipe
+  | GenericSchemaWithPipeAsync
+  | v.GenericSchema
+  | v.GenericSchemaAsync;
+
+type SchemaMaybeWithPipe<
+  TSchema extends v.GenericSchema | v.GenericSchemaAsync
+> = Optional<
+  TSchema extends v.GenericSchema
+    ? v.SchemaWithPipe<[TSchema, ...v.GenericPipeItem[]]>
+    : v.SchemaWithPipeAsync<
+        [TSchema, ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>]
+      >,
+  "pipe"
+>;
+
 export class MockError extends Error {
   constructor(public typeName?: string) {
     super(`Unable to generate a mock value for schema ${typeName}.`);
@@ -59,7 +91,7 @@ export interface ValimockOptions {
   customMocks: Record<
     string,
     (
-      schema: v.BaseSchema | v.BaseSchemaAsync,
+      schema: v.GenericSchema | v.GenericSchemaAsync,
       options?: ValimockOptions
     ) => unknown
   >;
@@ -152,31 +184,26 @@ export class Valimock {
     Object.assign(this.options, options);
   }
 
-  #getChecks = (
-    pipe: v.Pipe<unknown> | v.PipeAsync<unknown> = []
-  ): Record<string, unknown> => {
-    const isValidation = (
-      val: unknown
-    ): val is v.BaseValidation<unknown> & {
-      type: string;
-      requirement: unknown;
-    } =>
+  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync | []): Record<
+    string,
+    string | null
+  > => {
+    const isValidation = (val: unknown): val is v.GenericValidation =>
       typeof val === `object` &&
       val !== null &&
-      `type` in val &&
-      `requirement` in val &&
-      `message` in val;
+      `kind` in val &&
+      typeof val.kind === `string` &&
+      val.kind === `validation`;
 
     return Object.fromEntries(
-      [...pipe].reduce<Array<[key: string, requirement: unknown]>>(
-        (arr, item) => {
-          if (isValidation(item)) {
-            arr.push([item.type, item.requirement]);
-          }
-          return arr;
-        },
-        []
-      )
+      (pipe as Array<v.GenericPipeItem | v.GenericPipeItemAsync>).reduce<
+        Array<[key: string, expects: string | null]>
+      >((arr, item) => {
+        if (isValidation(item)) {
+          arr.push([item.type, item.expects]);
+        }
+        return arr;
+      }, [])
     );
   };
 
@@ -244,23 +271,22 @@ export class Valimock {
     }
   };
 
-  mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
-    schema: T
-  ): v.Output<typeof schema> => this.#mock(schema);
+  mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> =>
+    this.#mock(schema);
 
-  #mock = <T extends v.BaseSchema | v.BaseSchemaAsync>(
+  #mock = <T extends Schema>(
     schema: T,
     keyName?: string
-  ): v.Output<typeof schema> => {
+  ): v.InferOutput<typeof schema> => {
     try {
       if (this.options.seed) this.options.faker.seed(this.options.seed);
       if (
         v.isOfType<
           `string`,
-          | v.BaseSchema
-          | v.BaseSchemaAsync
-          | v.StringSchema
-          | v.StringSchemaAsync
+          | Schema
+          | SchemaMaybeWithPipe<
+              v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+            >
         >(`string`, schema)
       ) {
         return this.#mockString(schema, keyName);
@@ -283,57 +309,80 @@ export class Valimock {
     }
   };
 
-  #mockArray = (
-    schema: v.ArraySchema<v.BaseSchema> | v.ArraySchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
-    let min = (checks.min_length ?? 1) as number;
-    const max = (checks.max_length ?? 5) as number;
+  #mockArray = <
+    TSchema extends
+      | v.ArraySchema<SyncSchema, v.ErrorMessage<v.ArrayIssue> | undefined>
+      | v.ArraySchemaAsync<Schema, v.ErrorMessage<v.ArrayIssue> | undefined> =
+      | v.ArraySchema<SyncSchema, v.ErrorMessage<v.ArrayIssue> | undefined>
+      | v.ArraySchemaAsync<Schema, v.ErrorMessage<v.ArrayIssue> | undefined>
+  >(
+    schema: SchemaMaybeWithPipe<TSchema>
+  ): v.InferOutput<TSchema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
+    let min = checks.min_length
+      ? parseInt(checks.min_length.replace(`>=`, ``), 10)
+      : 1;
+    const max = checks.max_length
+      ? parseInt(checks.max_length.replace(`<=`, ``), 10)
+      : 5;
 
     if (min > max) {
       min = max;
     }
 
-    return Array.from<undefined, v.BaseSchema>(
+    return Array.from<undefined, v.InferOutput<TSchema>>(
       {
-        length:
-          typeof checks.length === `number`
-            ? checks.length
-            : this.options.faker.number.int({ min, max })
+        length: checks.length
+          ? parseInt(checks.length, 10)
+          : this.options.faker.number.int({ min, max })
       },
       () => this.#mock(schema.item)
     );
   };
 
   #mockBigint = (
-    schema: v.BigintSchema | v.BigintSchemaAsync
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
+    schema: SchemaMaybeWithPipe<
+      v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>
+    >
+  ): v.InferOutput<typeof schema> => {
+    const checks = this.#getChecks(schema.pipe ?? [schema]);
 
-    return typeof checks.value === `number` || typeof checks.value === `bigint`
+    return checks.value
       ? BigInt(checks.value)
       : this.options.faker.number.bigInt({
-          min: checks.min_value as number | undefined,
-          max: checks.max_value as number | undefined
+          min: checks.min_value
+            ? BigInt(checks.min_value.replace(`>=`, ``))
+            : undefined,
+          max: checks.max_value
+            ? BigInt(checks.max_value.replace(`<=`, ``))
+            : undefined
         });
   };
 
   #mockBoolean = (
-    schema: v.BooleanSchema | v.BooleanSchemaAsync
-  ): v.Output<typeof schema> => this.options.faker.datatype.boolean();
+    schema: SchemaMaybeWithPipe<
+      v.BooleanSchema<v.ErrorMessage<v.BooleanIssue> | undefined>
+    >
+  ): v.InferOutput<typeof schema> => this.options.faker.datatype.boolean();
 
   #mockDate = (
-    schema: v.DateSchema | v.DateSchemaAsync
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
+    schema: SchemaMaybeWithPipe<
+      v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>
+    >
+  ): v.InferOutput<typeof schema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
 
-    if (checks.value instanceof Date) {
-      return checks.value;
+    if (checks.value) {
+      return new Date(checks.value);
     }
 
     const bounds = {
-      min: checks.min_value as Date | undefined,
-      max: checks.max_value as Date | undefined
+      min: checks.min_value
+        ? new Date(checks.min_value.replace(`>=`, ``))
+        : undefined,
+      max: checks.max_value
+        ? new Date(checks.max_value.replace(`<=`, ``))
+        : undefined
     };
 
     let result = this.options.faker.date.soon();
@@ -355,29 +404,42 @@ export class Valimock {
   };
 
   #mockPicklist = (
-    schema: v.PicklistSchema<v.PicklistOptions>
-  ): v.Output<typeof schema> =>
+    schema: v.PicklistSchema<
+      v.PicklistOptions,
+      v.ErrorMessage<v.PicklistIssue> | undefined
+    >
+  ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement(schema.options);
 
   #mockIntersect = (
-    schema: v.IntersectSchema<v.IntersectOptions>
-  ): v.Output<typeof schema> =>
+    schema: v.IntersectSchema<
+      v.IntersectOptions,
+      v.ErrorMessage<v.IntersectIssue> | undefined
+    >
+  ): v.InferOutput<typeof schema> =>
     schema.options.reduce(
       (hash, entry) => Object.assign(hash, this.#mock(entry)),
-      // eslint-disable-next-line @typescript-eslint/prefer-reduce-type-parameter
-      {} as v.BaseSchema
-    ) as v.Output<typeof schema>;
+      // @ts-expect-error
+      {}
+    ) as v.InferOutput<typeof schema>;
 
   #mockLiteral = (
-    schema: v.LiteralSchema<v.Literal> | v.LiteralSchemaAsync<v.Literal>
-  ): v.Output<typeof schema> => schema.literal;
+    schema: v.LiteralSchema<
+      v.Literal,
+      v.ErrorMessage<v.LiteralIssue> | undefined
+    >
+  ): v.InferOutput<typeof schema> => schema.literal;
 
   #mockMap = (
     schema:
-      | v.MapSchema<v.BaseSchema, v.BaseSchema>
-      | v.MapSchemaAsync<v.BaseSchema, v.BaseSchema>
-  ): v.Output<typeof schema> => {
-    const result = new Map<v.BaseSchema, v.BaseSchema>();
+      | v.MapSchema<
+          SyncSchema,
+          SyncSchema,
+          v.ErrorMessage<v.MapIssue> | undefined
+        >
+      | v.MapSchemaAsync<Schema, Schema, v.ErrorMessage<v.MapIssue> | undefined>
+  ): v.InferOutput<typeof schema> => {
+    const result = new Map<unknown, unknown>();
     while (result.size < this.options.mapEntriesLength) {
       result.set(this.#mock(schema.key), this.#mock(schema.value));
     }
@@ -385,34 +447,56 @@ export class Valimock {
   };
 
   #mockNaN = (
-    schema: v.NanSchema<unknown> | v.NanSchemaAsync<unknown>
-  ): v.Output<typeof schema> => NaN;
+    schema: v.NanSchema<v.ErrorMessage<v.NanIssue> | undefined>
+  ): v.InferOutput<typeof schema> => NaN;
 
   #mockEnum = (
-    schema: v.EnumSchema<v.Enum> | v.EnumSchemaAsync<v.Enum>
-  ): v.Output<typeof schema> =>
+    schema: v.EnumSchema<v.Enum, v.ErrorMessage<v.EnumIssue> | undefined>
+  ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement(
       this.#getValidEnumValues(schema.enum)
     );
 
   #mockRequired = (
     schema:
-      | v.NonNullableSchema<v.BaseSchema>
-      | v.NonNullableSchemaAsync<v.BaseSchema>
-      | v.NonNullishSchema<v.BaseSchema>
-      | v.NonNullishSchemaAsync<v.BaseSchema>
-      | v.NonOptionalSchema<v.BaseSchema>
-      | v.NonOptionalSchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> => this.#mock(schema.wrapped);
+      | v.NonNullableSchema<
+          SyncSchema,
+          v.ErrorMessage<v.NonNullableIssue> | undefined
+        >
+      | v.NonNullableSchemaAsync<
+          Schema,
+          v.ErrorMessage<v.NonNullableIssue> | undefined
+        >
+      | v.NonNullishSchema<
+          SyncSchema,
+          v.ErrorMessage<v.NonNullishIssue> | undefined
+        >
+      | v.NonNullishSchemaAsync<
+          Schema,
+          v.ErrorMessage<v.NonNullishIssue> | undefined
+        >
+      | v.NonOptionalSchema<
+          SyncSchema,
+          v.ErrorMessage<v.NonOptionalIssue> | undefined
+        >
+      | v.NonOptionalSchemaAsync<
+          Schema,
+          v.ErrorMessage<v.NonOptionalIssue> | undefined
+        >
+  ): v.InferOutput<typeof schema> => this.#mock(schema.wrapped);
 
   #mockNullable = (
-    schema: v.NullableSchema<v.BaseSchema> | v.NullableSchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> =>
+    schema:
+      | v.NullableSchema<SyncSchema, SyncSchema>
+      | v.NullableSchemaAsync<Schema, Schema>
+  ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null]);
 
   #mockNullish = (
-    schema: v.NullishSchema<v.BaseSchema> | v.NullishSchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> =>
+    schema:
+      | v.NullishSchema<SyncSchema, SyncSchema>
+      | v.NullishSchemaAsync<Schema, Schema>
+  ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement([
       this.#mock(schema.wrapped),
       null,
@@ -423,24 +507,28 @@ export class Valimock {
     this.options.faker.helpers.arrayElement([null, undefined]);
 
   #mockNull = (
-    schema: v.NullSchema | v.NullSchemaAsync
-  ): v.Output<typeof schema> => null;
+    schema: v.NullSchema<v.ErrorMessage<v.NullIssue> | undefined>
+  ): v.InferOutput<typeof schema> => null;
 
   #mockNumber = (
-    schema: v.NumberSchema | v.NumberSchemaAsync
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
+    schema: SchemaMaybeWithPipe<
+      v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>
+    >
+  ): v.InferOutput<typeof schema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
 
     const isInteger = `integer` in checks;
     const bounds = {
-      min: (checks.min_value as number | undefined) ?? 0,
-      max:
-        (checks.max_value as number | undefined) ??
-        (typeof checks.min_value === `number` ? checks.min_value + 1 : 5)
+      min: checks.min_value ? Number(checks.min_value.replace(`>=`, ``)) : 0,
+      max: checks.max_value
+        ? Number(checks.max_value.replace(`<=`, ``))
+        : checks.min_value
+          ? Number(checks.min_value.replace(`>=`, ``)) + 1
+          : 5
     };
 
-    return typeof checks.value === `number`
-      ? checks.value
+    return checks.value
+      ? Number(checks.value)
       : isInteger
         ? this.options.faker.number.int(bounds)
         : this.options.faker.number.float(bounds);
@@ -448,57 +536,86 @@ export class Valimock {
 
   #mockObject = (
     schema:
-      | v.ObjectSchema<v.ObjectEntries>
-      | v.ObjectSchemaAsync<v.ObjectEntriesAsync>
-  ): v.Output<typeof schema> =>
-    Object.entries(schema.entries).reduce<Record<string, v.BaseSchema>>(
+      | v.ObjectSchema<
+          v.ObjectEntries,
+          v.ErrorMessage<v.ObjectIssue> | undefined
+        >
+      | v.ObjectSchemaAsync<
+          v.ObjectEntriesAsync,
+          v.ErrorMessage<v.ObjectIssue> | undefined
+        >
+  ): v.InferOutput<typeof schema> =>
+    Object.entries(schema.entries).reduce<Record<string, v.GenericSchema>>(
       (hash, [key, value]) => ({
         ...hash,
-        [key]: this.#mock<v.BaseSchema | v.BaseSchemaAsync>(value, key)
+        [key]: this.#mock<Schema>(value, key)
       }),
       {}
     );
 
   #mockOptional = (
-    schema: v.OptionalSchema<v.BaseSchema> | v.OptionalSchemaAsync<v.BaseSchema>
-  ): v.Output<typeof schema> =>
+    schema:
+      | v.OptionalSchema<SyncSchema, SyncSchema>
+      | v.OptionalSchemaAsync<Schema, Schema>
+  ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement([
-      this.#mock<v.BaseSchema>(schema.wrapped),
+      this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped),
       // eslint-disable-next-line no-undefined
       undefined
     ]) ?? schema.default;
 
   #mockRecord = <
-    Key extends v.RecordKey = v.RecordKey,
-    Value extends v.BaseSchema = v.BaseSchema
+    Key extends v.BaseSchema<
+      string,
+      number | string | symbol,
+      v.BaseIssue<unknown>
+    > = v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>>,
+    Value extends Schema = Schema
   >(
-    schema: v.RecordSchema<Key, Value> | v.RecordSchemaAsync<Key, Value>
-  ): v.Output<typeof schema> =>
+    schema: Value extends v.GenericSchema
+      ? v.RecordSchema<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
+      : v.RecordSchemaAsync<
+          Key,
+          Value,
+          v.ErrorMessage<v.RecordIssue> | undefined
+        >
+  ): v.InferOutput<typeof schema> =>
     Object.fromEntries(
       Array.from({ length: this.options.recordKeysLength }, () => [
         this.#mock(schema.key),
         this.#mock(schema.value)
       ])
-    ) as v.Output<typeof schema>;
+    ) as v.InferOutput<typeof schema>;
 
-  #mockRecursive = (
-    schema:
-      | v.LazySchema<() => v.BaseSchema>
-      | v.LazySchemaAsync<() => v.BaseSchema | v.BaseSchemaAsync>
-  ): v.Output<typeof schema> => this.#mock(schema.getter());
+  #mockRecursive =
+    (
+      schema:
+        | v.LazySchema<v.GenericSchema>
+        | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
+    ) =>
+    async (
+      input: v.InferInput<typeof schema>
+    ): Promise<v.InferOutput<typeof schema>> =>
+      this.#mock(await schema.getter(input));
 
-  #mockSet = (
-    schema: v.SetSchema<v.BaseSchema> | v.SetSchemaAsync<v.BaseSchemaAsync>
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
-    const fixed = typeof checks.size === `number` ? checks.size : null;
-    let min = typeof checks.min_size === `number` ? checks.min_size : 1;
-    const max = typeof checks.max_size === `number` ? checks.max_size : 5;
+  #mockSet = <
+    TSchema extends
+      | v.SetSchema<SyncSchema, v.ErrorMessage<v.SetIssue> | undefined>
+      | v.SetSchemaAsync<Schema, v.ErrorMessage<v.SetIssue> | undefined> =
+      | v.SetSchema<SyncSchema, v.ErrorMessage<v.SetIssue> | undefined>
+      | v.SetSchemaAsync<Schema, v.ErrorMessage<v.SetIssue> | undefined>
+  >(
+    schema: SchemaMaybeWithPipe<TSchema>
+  ): v.InferOutput<TSchema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
+    const fixed = checks.size ? Number(checks.size) : null;
+    let min = checks.min_size ? Number(checks.min_size.replace(`>=`, ``)) : 1;
+    const max = checks.max_size ? Number(checks.max_size.replace(`<=`, ``)) : 5;
     if (min > max) {
       min = max;
     }
     const targetLength = fixed ?? this.options.faker.number.int({ min, max });
-    const result = new Set<v.BaseSchema | v.BaseSchemaAsync>();
+    const result = new Set<Schema>();
     while (result.size < targetLength) {
       result.add(this.#mock(schema.value));
     }
@@ -506,15 +623,19 @@ export class Valimock {
   };
 
   #mockString = (
-    schema: v.StringSchema | v.StringSchemaAsync,
+    schema: SchemaMaybeWithPipe<
+      v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+    >,
     keyName?: string
-  ): v.Output<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe);
+  ): v.InferOutput<typeof schema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
     const bounds = {
-      min: (checks.min_length as number | undefined) ?? 0,
-      max:
-        (checks.max_length as number | undefined) ??
-        (typeof checks.min_length === `number` ? checks.min_length + 1 : 5)
+      min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
+      max: checks.max_length
+        ? Number(checks.max_length.replace(`<=`, ``))
+        : checks.min_length
+          ? Number(checks.min_length.replace(`>=`, ``)) + 1
+          : 5
     };
 
     if (bounds.min && bounds.max && bounds.min > bounds.max) {
@@ -523,9 +644,9 @@ export class Valimock {
       bounds.max = temp;
     }
 
-    if (typeof checks.length === `number`) {
-      bounds.min = checks.length;
-      bounds.max = checks.length;
+    if (checks.length) {
+      bounds.min = Number(checks.length);
+      bounds.max = Number(checks.length);
     }
 
     const targetStringLength = this.options.faker.number.int(bounds);
@@ -540,15 +661,12 @@ export class Valimock {
 
     // Next, try to match a supplied Regular Expression
     const regexCheck = schema.pipe?.find(
-      (check) =>
-        (`requirement` in check && check.requirement instanceof RegExp) ||
-        check.type === `regex`
+      (check) => check.kind === `validation` || check.type === `regex`
     );
     if (
       regexCheck &&
       `requirement` in regexCheck &&
-      (regexCheck.requirement instanceof RegExp ||
-        typeof regexCheck.requirement === `string`)
+      regexCheck.requirement instanceof RegExp
     ) {
       const generator = new RandExp(regexCheck.requirement);
       generator.randInt = (min: number, max: number): number =>
@@ -559,12 +677,8 @@ export class Valimock {
 
     // Then try to match to a user-defined custom string
     const lowerCaseKeyName = keyName?.toLowerCase();
-    if (keyName && this.options.stringMap) {
-      const generator = this.options.stringMap[keyName];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (generator) {
-        return generator();
-      }
+    if (keyName && this.options.stringMap?.[keyName]) {
+      return this.options.stringMap[keyName]();
     }
 
     // If all else fails, we'll either try to match based on the
@@ -602,20 +716,31 @@ export class Valimock {
   };
 
   #mockTuple = (
-    schema: v.TupleSchema<v.TupleItems> | v.TupleSchemaAsync<v.TupleItemsAsync>
-  ): v.Output<typeof schema> =>
-    schema.items.map((item) => this.#mock(item)) as v.Output<typeof schema>;
+    schema:
+      | v.TupleSchema<v.TupleItems, v.ErrorMessage<v.TupleIssue> | undefined>
+      | v.TupleSchemaAsync<
+          v.TupleItemsAsync,
+          v.ErrorMessage<v.TupleIssue> | undefined
+        >
+  ): v.InferOutput<typeof schema> =>
+    schema.items.map((item) => this.#mock(item));
 
   #mockUnion = (
     schema:
-      | v.UnionSchema<v.UnionOptions>
-      | v.UnionSchemaAsync<v.UnionOptions | v.UnionOptionsAsync>
-  ): v.Output<typeof schema> =>
+      | v.UnionSchema<
+          v.UnionOptions,
+          v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
+        >
+      | v.UnionSchemaAsync<
+          v.UnionOptions | v.UnionOptionsAsync,
+          v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
+        >
+  ): v.InferOutput<typeof schema> =>
     this.#mock(this.options.faker.helpers.arrayElement([...schema.options]));
 
   #mockUndefined = (
-    schema: v.UndefinedSchema | v.UndefinedSchemaAsync
-  ): v.Output<typeof schema> => undefined;
+    schema: v.UndefinedSchema<v.ErrorMessage<v.UndefinedIssue> | undefined>
+  ): v.InferOutput<typeof schema> => undefined;
 
   #schemas = {
     array: this.#mockArray,

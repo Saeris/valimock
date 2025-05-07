@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   intersect,
   intersectAsync,
   object,
@@ -19,10 +21,10 @@ describe(`mockIntersect`, () => {
   it.each([
     intersect([
       object({
-        name: string([minLength(2), maxLength(12)])
+        name: pipe(string(), minLength(2), maxLength(12))
       }),
       object({
-        email: string([email()])
+        email: pipe(string(), email())
       })
     ])
   ])(`should generate valid mock data (%#)`, (schema) => {
@@ -33,10 +35,10 @@ describe(`mockIntersect`, () => {
   it.each([
     intersectAsync([
       object({
-        name: string([minLength(2), maxLength(12)])
+        name: pipe(string(), minLength(2), maxLength(12))
       }),
       objectAsync({
-        email: string([email()])
+        email: pipeAsync(string(), email())
       })
     ])
   ])(

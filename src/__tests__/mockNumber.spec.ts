@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   parse,
   parseAsync,
   number,
-  numberAsync,
   maxValue,
   integer,
   minValue,
@@ -16,25 +17,24 @@ const mockSchema = new Valimock().mock;
 describe(`mockNumber`, () => {
   it.each([
     number(),
-    number([minValue(2)]),
-    number([maxValue(10)]),
-    number([value(5)]),
-    number([minValue(2), integer()]),
-    number([maxValue(10), integer()]),
-    number([value(5), integer()])
+    pipe(number(), minValue(2)),
+    pipe(number(), maxValue(10)),
+    pipe(number(), value(5)),
+    pipe(number(), minValue(2), integer()),
+    pipe(number(), maxValue(10), integer()),
+    pipe(number(), value(5), integer())
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
   it.each([
-    numberAsync(),
-    numberAsync([minValue(2)]),
-    numberAsync([maxValue(10)]),
-    numberAsync([value(5)]),
-    numberAsync([minValue(2), integer()]),
-    numberAsync([maxValue(10), integer()]),
-    numberAsync([value(5), integer()])
+    pipeAsync(number(), minValue(2)),
+    pipeAsync(number(), maxValue(10)),
+    pipeAsync(number(), value(5)),
+    pipeAsync(number(), minValue(2), integer()),
+    pipeAsync(number(), maxValue(10), integer()),
+    pipeAsync(number(), value(5), integer())
   ])(
     `should generate valid mock data with async validation (%#)`,
     async (schema) => {

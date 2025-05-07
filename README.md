@@ -26,12 +26,23 @@ yarn add -D valimock @faker-js/faker
 Import and optionally configure a new instance of the `Valimock` class, then pass along your `valibot` schema to `mock()`, that's it!
 
 ```ts
-import { parse, array, union, string, url, number, maxValue } from "valibot";
+import {
+  parse,
+  array,
+  union,
+  string,
+  pipe,
+  url,
+  number,
+  maxValue
+} from "valibot";
 import { Valimock } from "valimock";
 
 describe(`example test`, () => {
   it(`should generate valid mock data`, () => {
-    const schema = array(union([string([url()]), number([maxValue(20)])]));
+    const schema = array(
+      union([pipe(string(), url()), pipe(number(), maxValue(20))])
+    );
     const result = new Valimock().mock(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });

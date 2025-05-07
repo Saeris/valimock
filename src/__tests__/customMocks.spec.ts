@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { parse, special } from "valibot";
+import { parse, custom } from "valibot";
 import { Valimock } from "../Valimock.js";
 
-const customSchema = special(
+const customSchema = custom(
   (input) => typeof input === `string` && input === `custom`,
   `Invalid value!`
 );
 
 const mockSchema = new Valimock({
   customMocks: {
-    // Pattern match on the schema type value `special`
-    special: (schema) => {
-      // Compare the incoming schema to your instance of `special()`
+    // Pattern match on the schema type value `custom`
+    custom: (schema) => {
+      // Compare the incoming schema to your instance of `custom()`
       if (schema === customSchema) {
         // Return your mock data here
         return `custom`;

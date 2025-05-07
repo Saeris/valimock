@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  pipe,
+  pipeAsync,
   object,
+  objectAsync,
   map,
   mapAsync,
   string,
@@ -17,10 +20,10 @@ const mockSchema = new Valimock().mock;
 describe(`mockMap`, () => {
   it.each([
     map(
-      string([email()]),
+      pipe(string(), email()),
       object({
-        name: string([minLength(2), maxLength(16)]),
-        city: string([minLength(2), maxLength(24)])
+        name: pipe(string(), minLength(2), maxLength(16)),
+        city: pipe(string(), minLength(2), maxLength(24))
       })
     )
   ])(`should generate valid mock data (%#)`, (schema) => {
@@ -30,10 +33,10 @@ describe(`mockMap`, () => {
 
   it.each([
     mapAsync(
-      string([email()]),
-      object({
-        name: string([minLength(2), maxLength(16)]),
-        city: string([minLength(2), maxLength(24)])
+      pipe(string(), email()),
+      objectAsync({
+        name: pipeAsync(string(), minLength(2), maxLength(16)),
+        city: pipeAsync(string(), minLength(2), maxLength(24))
       })
     )
   ])(
