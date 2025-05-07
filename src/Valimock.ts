@@ -184,7 +184,7 @@ export class Valimock {
     Object.assign(this.options, options);
   }
 
-  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync): Record<
+  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync | []): Record<
     string,
     string | null
   > => {
@@ -196,7 +196,9 @@ export class Valimock {
       val.kind === `validation`;
 
     return Object.fromEntries(
-      pipe.reduce<Array<[key: string, expects: string | null]>>((arr, item) => {
+      (pipe as Array<v.GenericPipeItem | v.GenericPipeItemAsync>).reduce<
+        Array<[key: string, expects: string | null]>
+      >((arr, item) => {
         if (isValidation(item)) {
           arr.push([item.type, item.expects]);
         }
@@ -307,13 +309,16 @@ export class Valimock {
     }
   };
 
-  #mockArray = (
-    schema: SchemaMaybeWithPipe<
+  #mockArray = <
+    TSchema extends
+      | v.ArraySchema<SyncSchema, v.ErrorMessage<v.ArrayIssue> | undefined>
+      | v.ArraySchemaAsync<Schema, v.ErrorMessage<v.ArrayIssue> | undefined> =
       | v.ArraySchema<SyncSchema, v.ErrorMessage<v.ArrayIssue> | undefined>
       | v.ArraySchemaAsync<Schema, v.ErrorMessage<v.ArrayIssue> | undefined>
-    >
-  ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+  >(
+    schema: SchemaMaybeWithPipe<TSchema>
+  ): v.InferOutput<TSchema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
     let min = checks.min_length
       ? parseInt(checks.min_length.replace(`>=`, ``), 10)
       : 1;
@@ -325,7 +330,7 @@ export class Valimock {
       min = max;
     }
 
-    return Array.from<undefined, v.InferOutput<typeof schema>>(
+    return Array.from<undefined, v.InferOutput<TSchema>>(
       {
         length: checks.length
           ? parseInt(checks.length, 10)
@@ -365,7 +370,7 @@ export class Valimock {
       v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>
     >
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+    const checks = this.#getChecks(schema.pipe ?? []);
 
     if (checks.value) {
       return new Date(checks.value);
@@ -510,7 +515,7 @@ export class Valimock {
       v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>
     >
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+    const checks = this.#getChecks(schema.pipe ?? []);
 
     const isInteger = `integer` in checks;
     const bounds = {
@@ -582,19 +587,27 @@ export class Valimock {
       ])
     ) as v.InferOutput<typeof schema>;
 
-  #mockRecursive = async (
-    schema:
-      | v.LazySchema<v.GenericSchema>
-      | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
-  ): Promise<v.InferOutput<typeof schema>> => this.#mock(await schema.getter());
+  #mockRecursive =
+    (
+      schema:
+        | v.LazySchema<v.GenericSchema>
+        | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
+    ) =>
+    async (
+      input: v.InferInput<typeof schema>
+    ): Promise<v.InferOutput<typeof schema>> =>
+      this.#mock(await schema.getter(input));
 
-  #mockSet = (
-    schema: SchemaMaybeWithPipe<
+  #mockSet = <
+    TSchema extends
+      | v.SetSchema<SyncSchema, v.ErrorMessage<v.SetIssue> | undefined>
+      | v.SetSchemaAsync<Schema, v.ErrorMessage<v.SetIssue> | undefined> =
       | v.SetSchema<SyncSchema, v.ErrorMessage<v.SetIssue> | undefined>
       | v.SetSchemaAsync<Schema, v.ErrorMessage<v.SetIssue> | undefined>
-    >
-  ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+  >(
+    schema: SchemaMaybeWithPipe<TSchema>
+  ): v.InferOutput<TSchema> => {
+    const checks = this.#getChecks(schema.pipe ?? []);
     const fixed = checks.size ? Number(checks.size) : null;
     let min = checks.min_size ? Number(checks.min_size.replace(`>=`, ``)) : 1;
     const max = checks.max_size ? Number(checks.max_size.replace(`<=`, ``)) : 5;
@@ -615,7 +628,7 @@ export class Valimock {
     >,
     keyName?: string
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+    const checks = this.#getChecks(schema.pipe ?? []);
     const bounds = {
       min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
       max: checks.max_length

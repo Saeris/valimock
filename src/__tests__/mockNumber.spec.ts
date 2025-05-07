@@ -24,7 +24,7 @@ describe(`mockNumber`, () => {
     pipe(number(), maxValue(10), integer()),
     pipe(number(), value(5), integer())
   ])(`should generate valid mock data (%#)`, (schema) => {
-    const result = mockSchema(schema); //?
+    const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
