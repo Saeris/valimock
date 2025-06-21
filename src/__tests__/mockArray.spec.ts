@@ -7,6 +7,7 @@ import {
   array,
   string,
   length,
+  empty,
   minLength,
   maxLength,
   number,
@@ -24,9 +25,8 @@ describe(`mockArray`, () => {
   it.each([
     array(string()),
     array(number()),
-    array(
-      union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])
-    ),
+    array(union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])),
+    pipe(array(string()), empty()),
     pipe(array(string()), minLength(2)),
     pipe(array(string()), maxLength(10)),
     pipe(array(string()), length(5))
@@ -38,17 +38,13 @@ describe(`mockArray`, () => {
   it.each([
     arrayAsync(string()),
     arrayAsync(number()),
-    arrayAsync(
-      union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])
-    ),
+    arrayAsync(union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])),
+    pipeAsync(arrayAsync(string()), empty()),
     pipeAsync(arrayAsync(string()), minLength(2)),
     pipeAsync(arrayAsync(string()), maxLength(10)),
     pipeAsync(arrayAsync(string()), length(5))
-  ])(
-    `should generate valid mock data with async validation (%#)`,
-    async (schema) => {
-      const result = mockSchema(schema);
-      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
-    }
-  );
+  ])(`should generate valid mock data with async validation (%#)`, async (schema) => {
+    const result = mockSchema(schema);
+    await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+  });
 });

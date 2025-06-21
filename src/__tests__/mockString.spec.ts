@@ -23,7 +23,19 @@ import {
   isoWeek,
   ulid,
   url,
-  uuid
+  uuid,
+  object,
+  nonEmpty,
+  digits,
+  base64,
+  bic,
+  creditCard,
+  decimal,
+  empty,
+  hexadecimal,
+  hexColor,
+  mac,
+  octal
 } from "valibot";
 import { Valimock } from "../Valimock.js";
 
@@ -32,9 +44,16 @@ const mockSchema = new Valimock().mock;
 describe(`mockString`, () => {
   it.each([
     string(),
+    pipe(string(), base64()),
+    pipe(string(), bic()),
+    pipe(string(), creditCard()),
     pipe(string(), cuid2()),
+    pipe(string(), decimal()),
     pipe(string(), email()),
     pipe(string(), emoji()),
+    pipe(string(), empty()),
+    pipe(string(), hexadecimal()),
+    pipe(string(), hexColor()),
     pipe(string(), imei()),
     pipe(string(), ip()),
     pipe(string(), ipv4()),
@@ -45,6 +64,8 @@ describe(`mockString`, () => {
     pipe(string(), isoTimeSecond()),
     pipe(string(), isoTimestamp()),
     pipe(string(), isoWeek()),
+    pipe(string(), mac()),
+    pipe(string(), octal()),
     pipe(string(), ulid()),
     pipe(string(), url()),
     pipe(string(), uuid()),
@@ -53,7 +74,19 @@ describe(`mockString`, () => {
     pipe(string(), length(4)),
     pipe(string(), minLength(4)),
     pipe(string(), maxLength(16)),
-    pipe(string(), length(4))
+    pipe(string(), length(4)),
+    object({
+      username: pipe(string(), nonEmpty()),
+      displayName: pipe(string(), nonEmpty()),
+      discriminator: pipe(string(), digits(), length(4)),
+      firstName: pipe(string(), nonEmpty()),
+      middleName: pipe(string(), nonEmpty()),
+      lastName: pipe(string(), nonEmpty()),
+      fullName: pipe(string(), nonEmpty()),
+      gender: pipe(string(), nonEmpty()),
+      sex: pipe(string(), nonEmpty()),
+      zodiacSign: pipe(string(), nonEmpty())
+    })
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
@@ -66,11 +99,8 @@ describe(`mockString`, () => {
     pipeAsync(string(), minLength(4)),
     pipeAsync(string(), maxLength(16)),
     pipeAsync(string(), length(4))
-  ])(
-    `should generate valid mock data with async validation (%#)`,
-    async (schema) => {
-      const result = mockSchema(schema);
-      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
-    }
-  );
+  ])(`should generate valid mock data with async validation (%#)`, async (schema) => {
+    const result = mockSchema(schema);
+    await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+  });
 });

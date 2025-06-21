@@ -141,37 +141,74 @@ export class Valimock {
     columnRuleColor: this.options.faker.color.rgb,
     outlineColor: this.options.faker.color.rgb,
     phoneNumber: this.options.faker.phone.number,
-    username: this.options.faker.internet.username
+    username: this.options.faker.internet.username,
+    displayName: this.options.faker.internet.displayName,
+    firstName: this.options.faker.person.firstName,
+    middleName: this.options.faker.person.middleName,
+    lastName: this.options.faker.person.lastName,
+    fullName: this.options.faker.person.fullName,
+    gender: this.options.faker.person.gender,
+    sex: this.options.faker.person.sex,
+    zodiacSign: this.options.faker.person.zodiacSign,
+    isbn: this.options.faker.commerce.isbn,
+    iban: this.options.faker.finance.iban,
+    vin: this.options.faker.vehicle.vin,
+    vrm: this.options.faker.vehicle.vrm
   };
 
   #stringValidations = {
+    base64: (): string =>
+      this.options.faker.string.hexadecimal({
+        prefix: ``,
+        length: 64
+      }),
+    bic: this.options.faker.finance.bic,
+    credit_card: (): string =>
+      this.options.faker.finance.creditCardNumber({
+        issuer: this.options.faker.helpers.arrayElement([
+          `american_express`,
+          `diners_club`,
+          `discover`,
+          `jcb`,
+          `mastercard`,
+          `Visa`
+        ])
+      }),
     digits: this.options.faker.string.numeric,
+    decimal: (): string => this.options.faker.number.float().toString(),
     email: this.options.faker.internet.email,
     emoji: this.options.faker.internet.emoji,
+    hexadecimal: (options): string =>
+      this.options.faker.string.hexadecimal({
+        prefix: ``,
+        ...options
+      }),
+    hex_color: this.options.faker.color.rgb,
     imei: this.options.faker.phone.imei,
     ip: this.options.faker.internet.ip,
     ipv4: this.options.faker.internet.ipv4,
     ipv6: this.options.faker.internet.ipv6,
-    uuid: this.options.faker.string.uuid,
-    url: this.options.faker.internet.url
+    mac: this.options.faker.internet.mac,
+    nanoid: this.options.faker.string.nanoid,
+    octal: (options): string =>
+      this.options.faker.string.octal({
+        prefix: ``,
+        ...options
+      }),
+    ulid: this.options.faker.string.ulid,
+    url: this.options.faker.internet.url,
+    uuid: this.options.faker.string.uuid
   };
 
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
   }
 
-  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync | []): Record<string, string | null> => {
-    const isValidation = (val: unknown): val is v.GenericValidation =>
-      typeof val === `object` &&
-      val !== null &&
-      `kind` in val &&
-      typeof val.kind === `string` &&
-      val.kind === `validation`;
-
-    return Object.fromEntries(
+  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync | []): Record<string, string | null> =>
+    Object.fromEntries(
       (pipe as Array<v.GenericPipeItem | v.GenericPipeItemAsync>).reduce<Array<[key: string, expects: string | null]>>(
         (arr, item) => {
-          if (isValidation(item)) {
+          if (v.isOfKind(`validation`, item)) {
             arr.push([item.type, item.expects]);
           }
           return arr;
@@ -179,7 +216,6 @@ export class Valimock {
         []
       )
     );
-  };
 
   #getValidEnumValues = (obj: v.Enum): Array<number | string> =>
     Object.values(
@@ -273,6 +309,7 @@ export class Valimock {
     schema: SchemaMaybeWithPipe<TSchema>
   ): v.InferOutput<TSchema> => {
     const checks = this.#getChecks(schema.pipe ?? []);
+    if (`empty` in checks) return [];
     let min = checks.min_length ? parseInt(checks.min_length.replace(`>=`, ``), 10) : 1;
     const max = checks.max_length ? parseInt(checks.max_length.replace(`<=`, ``), 10) : 5;
 
@@ -497,11 +534,20 @@ export class Valimock {
     schema: SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>,
     keyName?: string
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? []); //?
+    const checks = this.#getChecks(schema.pipe ?? []);
     const bounds = {
       min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
-      max: checks.max_length ? Number(checks.max_length.replace(`<=`, ``)) : undefined
+      max: checks.max_length
+        ? Number(checks.max_length.replace(`<=`, ``))
+        : this.options.faker.number.int({
+            min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
+            max: 128
+          })
     };
+
+    if (`empty` in checks) {
+      return ``;
+    }
 
     if (bounds.min && bounds.max && bounds.min > bounds.max) {
       const temp = bounds.min;
@@ -509,10 +555,13 @@ export class Valimock {
       bounds.max = temp;
     }
 
-    if (checks.length) {
-      checks; //?
+    if (`length` in checks) {
       bounds.min = Number(checks.length);
       bounds.max = Number(checks.length);
+    }
+
+    if (`non_empty` in checks && bounds.min === 0) {
+      bounds.min = 1;
     }
 
     const targetStringLength = this.options.faker.number.int(bounds);
@@ -520,7 +569,6 @@ export class Valimock {
     // First, check to see if we have a supported validation
     const supportedValidation = Object.keys(checks).find((key) => Object.keys(this.#stringValidations).includes(key));
     if (typeof supportedValidation === `string`) {
-      supportedValidation; //?
       return this.#stringValidations[supportedValidation]({ length: bounds });
     }
 

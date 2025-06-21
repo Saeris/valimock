@@ -26,23 +26,12 @@ yarn add -D valimock @faker-js/faker
 Import and optionally configure a new instance of the `Valimock` class, then pass along your `valibot` schema to `mock()`, that's it!
 
 ```ts
-import {
-  parse,
-  array,
-  union,
-  string,
-  pipe,
-  url,
-  number,
-  maxValue
-} from "valibot";
+import { parse, array, union, string, pipe, url, number, maxValue } from "valibot";
 import { Valimock } from "valimock";
 
 describe(`example test`, () => {
   it(`should generate valid mock data`, () => {
-    const schema = array(
-      union([pipe(string(), url()), pipe(number(), maxValue(20))])
-    );
+    const schema = array(union([pipe(string(), url()), pipe(number(), maxValue(20))]));
     const result = new Valimock().mock(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
@@ -81,52 +70,75 @@ describe(`example test`, () => {
 
 ### Validations
 
-|                   | String | Number | Bigint | Boolean | Date | Array | Tuple | Union | Map | Set | Object | Blob |
-| ----------------- | :----: | :----: | :----: | :-----: | :--: | :---: | :---: | :---: | :-: | :-: | :----: | :--: |
-| **bytes**         |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **cuid2**         |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **custom**        |   ❌   |   ❌   |   ❌   |   ❌    |  ❌  |  ❌   |  ❌   |  ❌   | ❌  | ❌  |   ❌   |  ❌  |
-| **customAsync**   |   ❌   |   ❌   |   ❌   |   ❌    |  ❌  |  ❌   |  ❌   |  ❌   | ❌  | ❌  |   ❌   |  ❌  |
-| **email**         |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **emoji**         |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **endsWith**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **excludes**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ❌   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **finite**        |   ➖   |   ❌   |   ❌   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **imei**          |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **includes**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ❌   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **integer**       |   ➖   |   ✔   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **ip**            |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **ipv4**          |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **ipv6**          |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoDate**       |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoDateTime**   |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoTime**       |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoTimeSecond** |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoTimestamp**  |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **isoWeek**       |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **length**        |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ✔   |  ❌   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **mexBytes**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **maxLength**     |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ✔   |  ❌   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **maxSize**       |   ➖   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ❌  | ❌  |   ➖   |  ➖  |
-| **maxValue**      |   ❌   |   ✔   |   ✔   |   ➖    |  ✔  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **mimeType**      |   ➖   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ❌  |
-| **minBytes**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **minLength**     |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ✔   |  ❌   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **minSize**       |   ➖   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ❌  | ❌  |   ➖   |  ➖  |
-| **minValue**      |   ❌   |   ✔   |   ✔   |   ➖    |  ✔  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **multipleOf**    |   ➖   |   ❌   |   ❌   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **notBytes**      |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **notLength**     |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ❌   |  ❌   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **notSize**       |   ➖   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ❌  | ❌  |   ❌   |  ❌  |
-| **notValue**      |   ❌   |   ❌   |   ❌   |   ❌    |  ❌  |  ❌   |  ❌   |  ❌   | ❌  | ❌  |   ❌   |  ❌  |
-| **regex**         |   ⚠   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **safeInteger**   |   ➖   |   ❌   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **size**          |   ➖   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ❌  | ❌  |   ➖   |  ➖  |
-| **startsWith**    |   ❌   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **ulid**          |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **url**           |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **uuid**          |   ✔   |   ➖   |   ➖   |   ➖    |  ➖  |  ➖   |  ➖   |  ➖   | ➖  | ➖  |   ➖   |  ➖  |
-| **value**         |   ❌   |   ✔   |   ✔   |   ❌    |  ❌  |  ❌   |  ❌   |  ❌   | ❌  | ❌  |   ❌   |  ❌  |
+Below is an incomplete list of supported validations for the given schemas.
+
+#### Array
+
+|     check     |    checkItems    |     empty     |   everyItem   |   excludes   |
+| :-----------: | :--------------: | :-----------: | :-----------: | :----------: |
+|      ❌       |        ❌        |      ✔       |      ❌       |      ❌      |
+| **includes**  |    **length**    | **maxLength** | **minLength** | **nonEmpty** |
+|      ❌       |        ✔        |      ✔       |      ✔       |      ✔      |
+| **notLength** | **partialCheck** | **rawCheck**  | **someItem**  |
+|      ❌       |        ❌        |      ❌       |      ❌       |
+
+#### BigInt
+
+|     check      |   gtValue    |    ltValue    |   maxValue   | minValue  |
+| :------------: | :----------: | :-----------: | :----------: | :-------: |
+|       ❌       |      ❌      |      ❌       |      ✔      |    ✔     |
+| **multipleOf** | **notValue** | **notValues** | **rawCheck** | **value** |
+|       ❌       |      ❌      |      ❌       |      ❌      |    ✔     |
+|   **values**   |
+|       ❌       |
+
+#### Date
+
+|    check     |    gtValue    |   ltValue    | maxValue  |  minValue  |
+| :----------: | :-----------: | :----------: | :-------: | :--------: |
+|      ❌      |      ❌       |      ❌      |    ✔     |     ✔     |
+| **notValue** | **notValues** | **rawCheck** | **value** | **values** |
+|      ❌      |      ❌       |      ❌      |    ✔     |     ❌     |
+
+#### Number
+
+|    check     |     finite      |    gtValue     |   integer    |    ltValue    |
+| :----------: | :-------------: | :------------: | :----------: | :-----------: |
+|      ❌      |       ❌        |       ❌       |      ✔      |      ❌       |
+| **maxValue** |  **minValue**   | **multipleOf** | **notValue** | **notValues** |
+|      ✔      |       ✔        |       ❌       |      ❌      |      ❌       |
+| **rawCheck** | **safeInteger** |   **value**    |  **values**  |
+|      ❌      |       ❌        |       ✔       |      ❌      |
+
+#### String
+
+|      base64      |        bic        |      bytes       |    creditCard    |      cuid2      |
+| :--------------: | :---------------: | :--------------: | :--------------: | :-------------: |
+|        ✔        |        ✔         |        ❌        |        ✔        |       ✔        |
+|      check       |      decimal      |    **digits**    |    **email**     |    **emoji**    |
+|        ❌        |        ✔         |        ✔        |        ✔        |       ✔        |
+|    **empty**     |   **endsWith**    |   **excludes**   |  **graphemes**   |   **gtValue**   |
+|        ✔        |        ❌         |        ❌        |        ❌        |       ❌        |
+|     **hash**     |  **hexadecimal**  |   **hexColor**   |     **imei**     |  **includes**   |
+|        ❌        |        ✔         |        ✔        |        ✔        |       ❌        |
+|      **ip**      |     **ipv4**      |     **ipv6**     |   **isoDate**    | **isoDateTime** |
+|        ✔        |        ✔         |        ✔        |        ✔        |       ✔        |
+|   **isoTime**    | **isoTimeSecond** | **isoTimestamp** |   **isoWeek**    |   **length**    |
+|        ✔        |        ✔         |        ✔        |        ❌        |       ✔        |
+|   **ltValue**    |      **mac**      |    **mac48**     |    **mac64**     |  **maxBytes**   |
+|        ❌        |        ✔         |        ❌        |        ❌        |       ❌        |
+| **maxGraphemes** |   **maxLength**   |   **maxValue**   |   **maxWords**   |  **minBytes**   |
+|        ❌        |        ✔         |        ❌        |        ❌        |       ❌        |
+| **minGraphemes** |   **minLength**   |   **minValue**   |   **minWords**   |   **nanoid**    |
+|        ❌        |        ✔         |        ❌        |        ❌        |       ✔        |
+|   **nonEmpty**   |   **notBytes**    |  **notEntries**  | **notGraphemes** |  **notLength**  |
+|        ✔        |        ❌         |        ❌        |        ❌        |       ❌        |
+|   **notValue**   |   **notValues**   |   **notWords**   |    **octal**     |  **rawCheck**   |
+|        ❌        |        ❌         |        ❌        |        ✔        |       ❌        |
+|    **regex**     |   **rfcEmail**    |     **slug**     |  **startsWith**  |    **ulid**     |
+|        ✔        |        ❌         |        ❌        |        ❌        |       ✔        |
+|     **url**      |     **uuid**      |    **value**     |    **values**    |    **words**    |
+|        ✔        |        ✔         |        ❌        |        ❌        |       ❌        |
 
 ## 📣 Acknowledgements
 
