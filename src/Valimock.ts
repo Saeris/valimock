@@ -533,7 +533,9 @@ export class Valimock {
           min,
           max
         });
-      generator.max = bounds.max;
+      if (bounds.max) {
+        generator.max = bounds.max;
+      }
       return generator.gen();
     }
 
