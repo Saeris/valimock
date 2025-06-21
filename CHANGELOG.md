@@ -1,5 +1,13 @@
 # valimock
 
+## 1.1.1
+
+### Patch Changes
+
+- [`97a9221`](https://github.com/Saeris/valimock/commit/97a9221bc8efd8a3306d830c130e7f19d08171c7) Thanks [@Saeris](https://github.com/Saeris)! - Fix incorrect string max length behavior, Update dependencies
+
+  Strings were accidentally being capped to a fixed max length when a `maxLength()` validation was not provided by the schema, resulting in unwanted behavior such as the shortening of usernames, emails, etc, which would cause validations such as `email()` to fail against the resulting mock data.
+
 ## 1.1.0
 
 ### Minor Changes
