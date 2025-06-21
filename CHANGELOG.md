@@ -1,5 +1,42 @@
 # valimock
 
+## 1.2.0
+
+### Minor Changes
+
+- [`2f875f1`](https://github.com/Saeris/valimock/commit/2f875f12e96fd4694063bf16cbd97ae6d0d58809) Thanks [@Saeris](https://github.com/Saeris)! - Add support for new String validations and Keyword matchers
+
+  New Validations:
+
+  - base64
+  - bic
+  - creditCard
+  - decimal
+  - empty
+  - hexadecimal
+  - hexColor
+  - mac
+  - nanoid (unstable)
+  - octal
+
+  New keywords:
+
+  - username
+  - displayName
+  - firstName
+  - middleName
+  - lastName
+  - fullName
+  - gender
+  - sex
+  - zodiacSign
+  - isbn
+  - iban
+  - vin
+  - vrm
+
+  Also adds support for `empty()` for both Strings and Arrays
+
 ## 1.1.1
 
 ### Patch Changes
