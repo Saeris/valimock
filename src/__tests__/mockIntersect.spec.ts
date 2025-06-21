@@ -20,12 +20,8 @@ const mockSchema = new Valimock().mock;
 describe(`mockIntersect`, () => {
   it.each([
     intersect([
-      object({
-        name: pipe(string(), minLength(2), maxLength(12))
-      }),
-      object({
-        email: pipe(string(), email())
-      })
+      object({ name: pipe(string(), minLength(2), maxLength(12)) }),
+      object({ email: pipe(string(), email()) })
     ])
   ])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
@@ -34,12 +30,8 @@ describe(`mockIntersect`, () => {
 
   it.each([
     intersectAsync([
-      object({
-        name: pipe(string(), minLength(2), maxLength(12))
-      }),
-      objectAsync({
-        email: pipeAsync(string(), email())
-      })
+      object({ name: pipe(string(), minLength(2), maxLength(12)) }),
+      objectAsync({ email: pipeAsync(string(), email()) })
     ])
   ])(
     `should generate valid mock data with async validation (%#)`,

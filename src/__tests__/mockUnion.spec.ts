@@ -17,9 +17,7 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockUnion`, () => {
-  it.each([
-    union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])
-  ])(`should generate valid mock data (%#)`, (schema) => {
+  it.each([union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])])(`should generate valid mock data (%#)`, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
