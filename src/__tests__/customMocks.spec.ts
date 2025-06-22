@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parse, custom } from "valibot";
 import { Valimock } from "../Valimock.js";
 
-const customSchema = custom(
-  (input) => typeof input === `string` && input === `custom`,
-  `Invalid value!`
-);
+const customSchema = custom((input) => typeof input === `string` && input === `custom`, `Invalid value!`);
 
 const mockSchema = new Valimock({
   customMocks: {
@@ -21,8 +18,9 @@ const mockSchema = new Valimock({
 }).mock;
 
 describe(`customMocks config`, () => {
-  it.each([customSchema])(
+  it.concurrent.each([customSchema])(
     `should match user defined mocks to the given schema (%#)`,
+    { repeats: 5 },
     (schema) => {
       const result = mockSchema(schema);
       expect(parse(schema, result)).toStrictEqual(result);

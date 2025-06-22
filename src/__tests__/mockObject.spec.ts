@@ -22,25 +22,20 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockObject`, () => {
-  it.each([
+  it.concurrent.each([
     object({
       name: pipe(string(), minLength(2), maxLength(32)),
       address: object({
-        city: union([
-          literal(`San Francisco`),
-          literal(`Portland`),
-          literal(`Seattle`),
-          pipe(string(), minLength(2))
-        ]),
+        city: union([literal(`San Francisco`), literal(`Portland`), literal(`Seattle`), pipe(string(), minLength(2))]),
         postalCode: pipe(number(), maxValue(99999), integer(), minValue(0))
       })
     })
-  ])(`should generate valid mock data (%#)`, (schema) => {
+  ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
-  it.each([
+  it.concurrent.each([
     objectAsync({
       name: pipeAsync(string(), minLength(2), maxLength(32)),
       address: objectAsync({
@@ -53,11 +48,8 @@ describe(`mockObject`, () => {
         postalCode: pipeAsync(number(), maxValue(99999), integer(), minValue(0))
       })
     })
-  ])(
-    `should generate valid mock data with async validation (%#)`,
-    async (schema) => {
-      const result = mockSchema(schema);
-      await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
-    }
-  );
+  ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
+    const result = mockSchema(schema);
+    await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+  });
 });

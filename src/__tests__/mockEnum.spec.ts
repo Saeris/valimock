@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/prefer-enum-initializers */
 /* eslint-disable @typescript-eslint/prefer-literal-enum-member */
-/* eslint-disable no-bitwise */
+
 import { describe, expect, it } from "vitest";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
@@ -33,8 +33,9 @@ describe(`mockEnum`, () => {
     GREEN
   }
 
-  it.each([v.enum(States), v.enum(Flags), v.enum(Features), v.enum(Status)])(
+  it.concurrent.each([v.enum(States), v.enum(Flags), v.enum(Features), v.enum(Status)])(
     `should generate valid mock data (%#)`,
+    { repeats: 5 },
     (schema) => {
       const result = mockSchema(schema);
       expect(v.parse(schema, result)).toStrictEqual(result);

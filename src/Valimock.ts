@@ -5,6 +5,15 @@ import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import RandExp from "randexp";
 import * as v from "valibot";
 
+const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: unknown): ReturnType<T> => {
+  const result = fn(options);
+  if (typeof result === `undefined` || result === ``) {
+    return retry(fn, options);
+  }
+  // @ts-expect-error
+  return result;
+};
+
 type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 
 type GenericPipe = [v.GenericSchema, ...v.GenericPipeItem[]];
@@ -142,13 +151,13 @@ export class Valimock {
     outlineColor: this.options.faker.color.rgb,
     phoneNumber: this.options.faker.phone.number,
     username: this.options.faker.internet.username,
-    displayName: this.options.faker.internet.displayName,
-    firstName: this.options.faker.person.firstName,
-    middleName: this.options.faker.person.middleName,
-    lastName: this.options.faker.person.lastName,
-    fullName: this.options.faker.person.fullName,
-    gender: this.options.faker.person.gender,
-    sex: this.options.faker.person.sex,
+    displayName: (): string => retry(this.options.faker.internet.displayName),
+    firstName: (): string => retry(this.options.faker.person.firstName),
+    middleName: (): string => retry(this.options.faker.person.middleName),
+    lastName: (): string => retry(this.options.faker.person.lastName),
+    fullName: (): string => retry(this.options.faker.person.fullName),
+    gender: (): string => retry(this.options.faker.person.gender),
+    sex: (): string => retry(this.options.faker.person.sex),
     zodiacSign: this.options.faker.person.zodiacSign,
     isbn: this.options.faker.commerce.isbn,
     iban: this.options.faker.finance.iban,
@@ -165,21 +174,14 @@ export class Valimock {
     bic: this.options.faker.finance.bic,
     credit_card: (): string =>
       this.options.faker.finance.creditCardNumber({
-        issuer: this.options.faker.helpers.arrayElement([
-          `american_express`,
-          `diners_club`,
-          `discover`,
-          `jcb`,
-          `mastercard`,
-          `Visa`
-        ])
+        issuer: this.options.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
       }),
     digits: this.options.faker.string.numeric,
     decimal: (): string => this.options.faker.number.float().toString(),
     email: this.options.faker.internet.email,
     emoji: this.options.faker.internet.emoji,
     hexadecimal: (options): string =>
-      this.options.faker.string.hexadecimal({
+      retry(this.options.faker.string.hexadecimal, {
         prefix: ``,
         ...options
       }),
@@ -191,7 +193,7 @@ export class Valimock {
     mac: this.options.faker.internet.mac,
     nanoid: this.options.faker.string.nanoid,
     octal: (options): string =>
-      this.options.faker.string.octal({
+      retry(this.options.faker.string.octal, {
         prefix: ``,
         ...options
       }),
@@ -463,20 +465,22 @@ export class Valimock {
       | v.ObjectSchema<v.ObjectEntries, v.ErrorMessage<v.ObjectIssue> | undefined>
       | v.ObjectSchemaAsync<v.ObjectEntriesAsync, v.ErrorMessage<v.ObjectIssue> | undefined>
   ): v.InferOutput<typeof schema> =>
-    Object.entries(schema.entries).reduce<Record<string, v.GenericSchema>>(
-      (hash, [key, value]) => ({
+    Object.entries(schema.entries).reduce<Record<string, v.GenericSchema>>((hash, [key, value]) => {
+      const result = this.#mock<Schema>(value, key);
+      if (v.isOfType(`exact_optional`, value) && typeof result === `undefined`) {
+        return hash;
+      }
+      return {
         ...hash,
-        [key]: this.#mock<Schema>(value, key)
-      }),
-      {}
-    );
+        [key]: result
+      };
+    }, {});
 
   #mockOptional = (
     schema: v.OptionalSchema<SyncSchema, SyncSchema> | v.OptionalSchemaAsync<Schema, Schema>
   ): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement([
       this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped),
-
       undefined
     ]) ?? schema.default;
 
@@ -631,11 +635,15 @@ export class Valimock {
           v.UnionOptions | v.UnionOptionsAsync,
           v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
         >
-  ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement([...schema.options]));
+  ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement(schema.options));
 
   #mockUndefined = (
     schema: v.UndefinedSchema<v.ErrorMessage<v.UndefinedIssue> | undefined>
   ): v.InferOutput<typeof schema> => undefined;
+
+  #mockVariant = <Key extends string = string>(
+    schema: v.VariantSchema<Key, v.VariantOptions<Key>, v.ErrorMessage<v.VariantIssue> | undefined>
+  ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement(schema.options)) ?? {};
 
   #schemas = {
     array: this.#mockArray,
@@ -643,6 +651,7 @@ export class Valimock {
     boolean: this.#mockBoolean,
     date: this.#mockDate,
     enum: this.#mockEnum,
+    exactOptional: this.#mockOptional,
     intersect: this.#mockIntersect,
     literal: this.#mockLiteral,
     map: this.#mockMap,
@@ -663,6 +672,7 @@ export class Valimock {
     string: this.#mockString,
     tuple: this.#mockTuple,
     union: this.#mockUnion,
-    undefined: this.#mockUndefined
+    undefined: this.#mockUndefined,
+    variant: this.#mockVariant
   };
 }

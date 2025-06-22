@@ -5,7 +5,7 @@ import { Valimock } from "../Valimock.js";
 const mockSchema = new Valimock().mock;
 
 describe(`mockNaN`, () => {
-  it.each([nan()])(`should generate valid mock data (%#)`, (schema) => {
+  it.concurrent.each([nan()])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
     const result = mockSchema(schema);
     expect(parse(schema, result)).toStrictEqual(result);
   });
