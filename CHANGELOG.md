@@ -1,5 +1,11 @@
 # valimock
 
+## 1.3.0
+
+### Minor Changes
+
+- [`4170123`](https://github.com/Saeris/valimock/commit/41701235c63bbd3b4c341efceb1f4e8edecab9f4) Thanks [@Saeris](https://github.com/Saeris)! - Add `variant` and `exactOptional` schema support, Improve test reliability
+
 ## 1.2.0
 
 ### Minor Changes
