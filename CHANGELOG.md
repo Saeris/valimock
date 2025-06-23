@@ -1,5 +1,11 @@
 # valimock
 
+## 1.3.1
+
+### Patch Changes
+
+- [`50dfba1`](https://github.com/Saeris/valimock/commit/50dfba1d09270aeb7e1060096d687a184fdfb5a6) Thanks [@Saeris](https://github.com/Saeris)! - Enhance test resiliancy for `string()` schemas, Retry by default for possible falsy values
+
 ## 1.3.0
 
 ### Minor Changes
