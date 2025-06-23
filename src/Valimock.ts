@@ -5,13 +5,12 @@ import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import RandExp from "randexp";
 import * as v from "valibot";
 
-const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: unknown): ReturnType<T> => {
+const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: Parameters<T>[0]): string => {
   const result = fn(options);
-  if (typeof result === `undefined` || result === ``) {
-    return retry(fn, options);
+  if (typeof result === `string` && result.length > 0) {
+    return result;
   }
-  // @ts-expect-error
-  return result;
+  return retry(fn, options);
 };
 
 type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
@@ -121,7 +120,7 @@ export class Valimock {
     }
   };
 
-  #stringGenerators: Record<string, FakerFunction> = {
+  #stringGenerators: Record<string, (...args: unknown[]) => string> = {
     default: (length: number): string =>
       length > 10 ? this.options.faker.lorem.word() : this.options.faker.lorem.word({ length }),
     email: this.options.faker.internet.exampleEmail,
@@ -131,7 +130,6 @@ export class Valimock {
     name: this.options.faker.person.fullName,
     date: (): string => this.options.faker.date.recent().toISOString(),
     dateTime: (): string => this.options.faker.date.recent().toISOString(),
-    digits: this.options.faker.string.numeric,
     colorHex: this.options.faker.color.rgb,
     color: this.options.faker.color.rgb,
     backgroundColor: this.options.faker.color.rgb,
@@ -151,13 +149,13 @@ export class Valimock {
     outlineColor: this.options.faker.color.rgb,
     phoneNumber: this.options.faker.phone.number,
     username: this.options.faker.internet.username,
-    displayName: (): string => retry(this.options.faker.internet.displayName),
-    firstName: (): string => retry(this.options.faker.person.firstName),
-    middleName: (): string => retry(this.options.faker.person.middleName),
-    lastName: (): string => retry(this.options.faker.person.lastName),
-    fullName: (): string => retry(this.options.faker.person.fullName),
-    gender: (): string => retry(this.options.faker.person.gender),
-    sex: (): string => retry(this.options.faker.person.sex),
+    displayName: this.options.faker.internet.displayName,
+    firstName: this.options.faker.person.firstName,
+    middleName: this.options.faker.person.middleName,
+    lastName: this.options.faker.person.lastName,
+    fullName: this.options.faker.person.fullName,
+    gender: this.options.faker.person.gender,
+    sex: this.options.faker.person.sex,
     zodiacSign: this.options.faker.person.zodiacSign,
     isbn: this.options.faker.commerce.isbn,
     iban: this.options.faker.finance.iban,
@@ -176,12 +174,16 @@ export class Valimock {
       this.options.faker.finance.creditCardNumber({
         issuer: this.options.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
       }),
-    digits: this.options.faker.string.numeric,
+    digits: (options): string =>
+      this.options.faker.string.numeric({
+        allowLeadingZeros: true,
+        ...options
+      }),
     decimal: (): string => this.options.faker.number.float().toString(),
     email: this.options.faker.internet.email,
     emoji: this.options.faker.internet.emoji,
     hexadecimal: (options): string =>
-      retry(this.options.faker.string.hexadecimal, {
+      this.options.faker.string.hexadecimal({
         prefix: ``,
         ...options
       }),
@@ -193,7 +195,7 @@ export class Valimock {
     mac: this.options.faker.internet.mac,
     nanoid: this.options.faker.string.nanoid,
     octal: (options): string =>
-      retry(this.options.faker.string.octal, {
+      this.options.faker.string.octal({
         prefix: ``,
         ...options
       }),
@@ -544,7 +546,7 @@ export class Valimock {
       max: checks.max_length
         ? Number(checks.max_length.replace(`<=`, ``))
         : this.options.faker.number.int({
-            min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
+            min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : `non_empty` in checks ? 1 : 0,
             max: 128
           })
     };
@@ -573,7 +575,7 @@ export class Valimock {
     // First, check to see if we have a supported validation
     const supportedValidation = Object.keys(checks).find((key) => Object.keys(this.#stringValidations).includes(key));
     if (typeof supportedValidation === `string`) {
-      return this.#stringValidations[supportedValidation]({ length: bounds });
+      return retry(this.#stringValidations[supportedValidation], { length: bounds });
     }
 
     // Next, try to match a supplied Regular Expression
@@ -594,7 +596,7 @@ export class Valimock {
     // Then try to match to a user-defined custom string
     const lowerCaseKeyName = keyName?.toLowerCase();
     if (keyName && this.options.stringMap?.[keyName]) {
-      return this.options.stringMap[keyName]({ length: bounds });
+      return retry(this.options.stringMap[keyName], { length: bounds });
     }
 
     // If all else fails, we'll either try to match based on the
@@ -607,11 +609,9 @@ export class Valimock {
           schema.pipe?.find((item) => typeof item.type === `string` && item.type.toUpperCase() === genKey.toUpperCase())
       ) ?? null;
 
-    const foundFaker = this.#findMatchingFaker(keyName);
-    const generator: FakerFunction = stringType
-      ? this.#stringGenerators[stringType]
-      : (foundFaker ?? this.#stringGenerators.default);
-    generator.name;
+    const generator = stringType
+      ? (): string => retry(this.#stringGenerators[stringType])
+      : (this.#findMatchingFaker(keyName) ?? this.#stringGenerators.default);
 
     let val = generator().toString();
     const delta = targetStringLength - val.length;

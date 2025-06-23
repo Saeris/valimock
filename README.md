@@ -2,10 +2,10 @@
 
 # 🃏 Valimock
 
-[![npm version](https://img.shields.io/npm/v/valimock.svg?style=flat)](https://www.npmjs.com/package/valimock)
-[![CI status](https://github.com/saeris/valimock/actions/workflows/ci.yml/badge.svg)](https://github.com/saeris/valimock/actions/workflows/ci.yml)
+[![npm version][npm_badge]][npm]
+[![CI status][ci_badge]][ci]
 
-Generate mock data for [Valibot](https://github.com/fabian-hiller/valibot) schemas using [Faker](https://github.com/faker-js/faker)
+Generate mock data for [Valibot][valibot] schemas using [Faker][faker]
 
 </div>
 
@@ -42,7 +42,7 @@ describe(`example test`, () => {
 >
 > For async schemas, you will need to use `parseAsync()`. Be aware that async schemas generate a `Promise` and may need to be `await`'ed depending on usage.
 >
-> Please see the [`__tests__`](./src/__tests__/) folder for more usage examples of different schema types.
+> Please see the [`__tests__`][tests] folder for more usage examples of different schema types.
 
 ## API Coverage
 
@@ -142,8 +142,19 @@ Below is an incomplete list of supported validations for the given schemas.
 
 ## 📣 Acknowledgements
 
-Valimock's implementation is based on [`@anatine/zod-mock`](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
+Valimock's implementation is based on [`@anatine/zod-mock`][zod-mock]
 
 ## 🥂 License
 
-Released under the [MIT license](https://github.com/Saeris/discordkit/blob/master/LICENSE.md).
+Released under the [MIT license][license] © [Drake Costa][personal-website].
+
+[npm_badge]: https://img.shields.io/npm/v/valimock.svg?style=flat
+[npm]: https://www.npmjs.com/package/valimock
+[ci_badge]: https://github.com/saeris/valimock/actions/workflows/ci.yml/badge.svg
+[ci]: https://github.com/saeris/valimock/actions/workflows/ci.yml
+[valibot]: https://github.com/fabian-hiller/valibot
+[faker]: https://github.com/faker-js/faker
+[tests]: ./src/__tests__/
+[zod-mock]: https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock
+[license]: ./LICENSE.md
+[personal-website]: https://saeris.gg

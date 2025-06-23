@@ -74,8 +74,40 @@ describe(`mockString`, () => {
     pipe(string(), length(4)),
     pipe(string(), minLength(4)),
     pipe(string(), maxLength(16)),
-    pipe(string(), length(4)),
+    pipe(string(), length(4))
+  ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
+    const result = mockSchema(schema);
+    expect(parse(schema, result)).toStrictEqual(result);
+  });
+
+  it.concurrent.each([
     object({
+      email: pipe(string(), email()),
+      uuid: pipe(string(), uuid()),
+      uid: pipe(string(), uuid()),
+      url: pipe(string(), url()),
+      name: pipe(string(), nonEmpty()),
+      date: pipe(string(), isoDate()),
+      dateTime: pipe(string(), isoDateTime()),
+      digits: pipe(string(), digits()),
+      colorHex: pipe(string(), hexColor()),
+      color: pipe(string(), hexColor()),
+      backgroundColor: pipe(string(), hexColor()),
+      textShadow: pipe(string(), hexColor()),
+      textColor: pipe(string(), hexColor()),
+      textDecorationColor: pipe(string(), hexColor()),
+      borderColor: pipe(string(), hexColor()),
+      borderTopColor: pipe(string(), hexColor()),
+      borderRightColor: pipe(string(), hexColor()),
+      borderBottomColor: pipe(string(), hexColor()),
+      borderLeftColor: pipe(string(), hexColor()),
+      borderBlockStartColor: pipe(string(), hexColor()),
+      borderBlockEndColor: pipe(string(), hexColor()),
+      borderInlineStartColor: pipe(string(), hexColor()),
+      borderInlineEndColor: pipe(string(), hexColor()),
+      columnRuleColor: pipe(string(), hexColor()),
+      outlineColor: pipe(string(), hexColor()),
+      phoneNumber: pipe(string(), nonEmpty()),
       username: pipe(string(), nonEmpty()),
       displayName: pipe(string(), nonEmpty()),
       discriminator: pipe(string(), digits(), length(4)),
@@ -85,9 +117,13 @@ describe(`mockString`, () => {
       fullName: pipe(string(), nonEmpty()),
       gender: pipe(string(), nonEmpty()),
       sex: pipe(string(), nonEmpty()),
-      zodiacSign: pipe(string(), nonEmpty())
+      zodiacSign: pipe(string(), nonEmpty()),
+      isbn: pipe(string(), nonEmpty()),
+      iban: pipe(string(), nonEmpty()),
+      vin: pipe(string(), nonEmpty()),
+      vrm: pipe(string(), nonEmpty())
     })
-  ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
+  ])(`should generate valid mock data based on object keys (%#)`, { repeats: 5 }, (schema) => {
     const result = mockSchema(schema); // ?
     expect(parse(schema, result)).toStrictEqual(result);
   });
