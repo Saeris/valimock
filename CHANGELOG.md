@@ -1,5 +1,11 @@
 # valimock
 
+## 1.4.0
+
+### Minor Changes
+
+- [`eb2553c`](https://github.com/Saeris/valimock/commit/eb2553c603cf8c09bf84d112988a2a7d6821592b) Thanks [@Saeris](https://github.com/Saeris)! - Add basic support for `required()` and `omit()`
+
 ## 1.3.1
 
 ### Patch Changes
@@ -19,7 +25,6 @@
 - [`2f875f1`](https://github.com/Saeris/valimock/commit/2f875f12e96fd4694063bf16cbd97ae6d0d58809) Thanks [@Saeris](https://github.com/Saeris)! - Add support for new String validations and Keyword matchers
 
   New Validations:
-
   - base64
   - bic
   - creditCard
@@ -32,7 +37,6 @@
   - octal
 
   New keywords:
-
   - username
   - displayName
   - firstName
