@@ -4,6 +4,15 @@
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import RandExp from "randexp";
 import * as v from "valibot";
+import type {
+  GenericPipe,
+  GenericPipeAsync,
+  Schema,
+  SchemaMaybeWithPipe,
+  SyncSchema,
+  MaybeRequiredSchema,
+  RequiredSchema
+} from "./types.js";
 
 const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: Parameters<T>[0]): string => {
   const result = fn(options);
@@ -12,27 +21,6 @@ const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: Parame
   }
   return retry(fn, options);
 };
-
-type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
-
-type GenericPipe = [v.GenericSchema, ...v.GenericPipeItem[]];
-
-type GenericSchemaWithPipe = v.SchemaWithPipe<GenericPipe>;
-
-type GenericPipeAsync = [v.GenericSchema | v.GenericSchemaAsync, ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>];
-
-type GenericSchemaWithPipeAsync = v.SchemaWithPipeAsync<GenericPipeAsync>;
-
-type SyncSchema = GenericSchemaWithPipe | v.GenericSchema;
-
-type Schema = GenericSchemaWithPipe | GenericSchemaWithPipeAsync | v.GenericSchema | v.GenericSchemaAsync;
-
-type SchemaMaybeWithPipe<TSchema extends v.GenericSchema | v.GenericSchemaAsync> = Optional<
-  TSchema extends v.GenericSchema
-    ? v.SchemaWithPipe<[TSchema, ...v.GenericPipeItem[]]>
-    : v.SchemaWithPipeAsync<[TSchema, ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>]>,
-  `pipe`
->;
 
 export class MockError extends Error {
   constructor(public typeName?: string) {
@@ -417,15 +405,18 @@ export class Valimock {
   #mockEnum = (schema: v.EnumSchema<v.Enum, v.ErrorMessage<v.EnumIssue> | undefined>): v.InferOutput<typeof schema> =>
     this.options.faker.helpers.arrayElement(this.#getValidEnumValues(schema.enum));
 
-  #mockRequired = (
-    schema:
-      | v.NonNullableSchema<SyncSchema, v.ErrorMessage<v.NonNullableIssue> | undefined>
-      | v.NonNullableSchemaAsync<Schema, v.ErrorMessage<v.NonNullableIssue> | undefined>
-      | v.NonNullishSchema<SyncSchema, v.ErrorMessage<v.NonNullishIssue> | undefined>
-      | v.NonNullishSchemaAsync<Schema, v.ErrorMessage<v.NonNullishIssue> | undefined>
-      | v.NonOptionalSchema<SyncSchema, v.ErrorMessage<v.NonOptionalIssue> | undefined>
-      | v.NonOptionalSchemaAsync<Schema, v.ErrorMessage<v.NonOptionalIssue> | undefined>
-  ): v.InferOutput<typeof schema> => this.#mock(schema.wrapped);
+  #mockRequired = <TSchema extends MaybeRequiredSchema<Schema | SyncSchema>>(
+    schema: RequiredSchema<TSchema>
+  ): v.InferOutput<typeof schema> => {
+    const isNestedRequired = (val: Schema | SyncSchema): val is RequiredSchema<typeof val> =>
+      Object.hasOwn(val, `expects`) &&
+      ![`!null`, `(!null & !undefined)`, `!undefined`].includes(val.expects) &&
+      Object.hasOwn(val, `wrapped`);
+    if (isNestedRequired(schema.wrapped)) {
+      return this.#mock(schema.wrapped.wrapped);
+    }
+    return this.#mock(schema.wrapped);
+  };
 
   #mockNullable = (
     schema: v.NullableSchema<SyncSchema, SyncSchema> | v.NullableSchemaAsync<Schema, Schema>
@@ -469,6 +460,9 @@ export class Valimock {
   ): v.InferOutput<typeof schema> =>
     Object.entries(schema.entries).reduce<Record<string, v.GenericSchema>>((hash, [key, value]) => {
       const result = this.#mock<Schema>(value, key);
+      // if a property is marked as exactOptional and it's mock value ended up
+      // being undefined, just exclude the property key entirely to simulate
+      // the expected behavior of that key being potentially missing
       if (v.isOfType(`exact_optional`, value) && typeof result === `undefined`) {
         return hash;
       }
@@ -481,10 +475,11 @@ export class Valimock {
   #mockOptional = (
     schema: v.OptionalSchema<SyncSchema, SyncSchema> | v.OptionalSchemaAsync<Schema, Schema>
   ): v.InferOutput<typeof schema> =>
+    schema.default ??
     this.options.faker.helpers.arrayElement([
       this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped),
       undefined
-    ]) ?? schema.default;
+    ]);
 
   #mockRecord = <
     Key extends v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>> = v.BaseSchema<
@@ -667,6 +662,7 @@ export class Valimock {
     optional: this.#mockOptional,
     picklist: this.#mockPicklist,
     record: this.#mockRecord,
+    required: this.#mockRequired,
     recursive: this.#mockRecursive,
     set: this.#mockSet,
     string: this.#mockString,

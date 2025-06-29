@@ -78,30 +78,36 @@ const vehiclesSchema = intersect([
   ])
 ]);
 
-const nestedSchema = variant(`kind`, [
-  variant(`type`, [
-    object({
-      kind: literal(`fruit`),
-      type: literal(`apple`),
-      color: literal(`green`)
-    }),
-    object({
-      kind: literal(`fruit`),
-      type: literal(`banana`),
-      color: literal(`yellow`)
-    })
-  ]),
-  variant(`type`, [
-    object({
-      kind: literal(`vegetable`),
-      type: literal(`carrot`),
-      color: literal(`orange`)
-    }),
-    object({
-      kind: literal(`vegetable`),
-      type: literal(`tomato`),
-      color: literal(`red`)
-    })
+const nestedSchema = intersect([
+  object({
+    price: number(),
+    quantity: pipe(number(), integer())
+  }),
+  variant(`kind`, [
+    variant(`type`, [
+      object({
+        kind: literal(`fruit`),
+        type: literal(`apple`),
+        color: literal(`green`)
+      }),
+      object({
+        kind: literal(`fruit`),
+        type: literal(`banana`),
+        color: literal(`yellow`)
+      })
+    ]),
+    variant(`type`, [
+      object({
+        kind: literal(`vegetable`),
+        type: literal(`carrot`),
+        color: literal(`orange`)
+      }),
+      object({
+        kind: literal(`vegetable`),
+        type: literal(`tomato`),
+        color: literal(`red`)
+      })
+    ])
   ])
 ]);
 

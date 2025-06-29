@@ -76,7 +76,7 @@ describe(`mockString`, () => {
     pipe(string(), maxLength(16)),
     pipe(string(), length(4))
   ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
-    const result = mockSchema(schema);
+    const result = mockSchema(schema); //?
     expect(parse(schema, result)).toStrictEqual(result);
   });
 
