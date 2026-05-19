@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import * as v from "valibot";
+import { generateArray } from "./array/generateArray.js";
 import { generateBigint } from "./bigint/generateBigint.js";
 import { generateDate } from "./date/generateDate.js";
 import { generateNumber } from "./number/generateNumber.js";
@@ -183,28 +184,12 @@ export class Valimock {
       | v.ArraySchemaAsync<Schema, v.ErrorMessage<v.ArrayIssue> | undefined>
   >(
     schema: SchemaMaybeWithPipe<TSchema>
-  ): v.InferOutput<TSchema> => {
-    const checks = this.#getChecks(schema.pipe ?? []);
-    if (`empty` in checks) return [];
-    let min = checks.min_length ? parseInt(checks.min_length.replace(`>=`, ``), 10) : 1;
-    const max = checks.max_length ? parseInt(checks.max_length.replace(`<=`, ``), 10) : 5;
-
-    if (min > max) {
-      min = max;
-    }
-
-    return Array.from<undefined, v.InferOutput<TSchema>>(
-      {
-        length: checks.length
-          ? parseInt(checks.length, 10)
-          : this.options.faker.number.int({
-              min,
-              max
-            })
-      },
-      () => this.#mock(schema.item)
-    );
-  };
+  ): v.InferOutput<TSchema> =>
+    generateArray(schema, {
+      faker: this.options.faker,
+      onWarn: this.options.onWarn,
+      mockItem: (item) => this.#mock(item)
+    }) as v.InferOutput<TSchema>;
 
   #mockBigint = (
     schema: SchemaMaybeWithPipe<v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>>
