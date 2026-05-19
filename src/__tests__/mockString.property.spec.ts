@@ -154,17 +154,7 @@ const stringSchemaArb = fc
   });
 
 describe(`mockString property-based`, () => {
-  // Skipped at this checkpoint. The bounds-aware format generators handle the
-  // common cases (email/url/ip with tight bounds, decimal with maxLength<3,
-  // BIC with the "00" location-code pattern, cuid2 with min>24, etc.) but
-  // fast-check still finds edge cases where Valibot's regex permits a value
-  // that faker won't produce *and* our synthesis fallback doesn't cover —
-  // e.g. `pipe(string(), decimal(), length(21))` (a 21-char all-digit number).
-  //
-  // Re-enable this property test as we expand synthesis fallbacks for each
-  // remaining format. Until then it serves as a running catalog of gaps the
-  // existing hand-coded tests don't enumerate.
-  it.skip(`every mock value round-trips through Valibot's parse`, () => {
+  it(`every mock value round-trips through Valibot's parse`, () => {
     fc.assert(
       fc.property(stringSchemaArb, (schema) => {
         const value = mock(schema);

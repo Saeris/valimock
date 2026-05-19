@@ -23,6 +23,51 @@ const withinBounds = (value: string, ctx: StringContext): boolean =>
   value.length >= ctx.bounds.min && value.length <= ctx.bounds.max;
 
 /**
+ * Synthesize a valid IPv4 sized to fit `ctx.bounds`. Each octet can be 1-3
+ * chars (`0`-`255`), so total length is 7 ("1.1.1.1") to 15 ("255.255.255.255").
+ * Pick a target length and divide it across the four octets.
+ */
+const synthesizeIpv4 = (ctx: StringContext): string => {
+  const target = Math.max(7, Math.min(15, ctx.bounds.min === ctx.bounds.max ? ctx.bounds.max : ctx.bounds.max));
+  // Distribute `target - 3` digits across 4 octets (3 dots).
+  const digitsTotal = target - 3;
+  const baseDigits = Math.floor(digitsTotal / 4);
+  const extras = digitsTotal % 4;
+  const octets: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    const w = baseDigits + (i < extras ? 1 : 0);
+    octets.push(octetForWidth(w, ctx));
+  }
+  return octets.join(`.`);
+};
+
+/** Produce an IPv4 octet of exactly `width` characters (1-3). */
+const octetForWidth = (width: number, ctx: StringContext): string => {
+  if (width <= 1) return String(ctx.faker.number.int({ min: 0, max: 9 }));
+  if (width === 2) return String(ctx.faker.number.int({ min: 10, max: 99 }));
+  return String(ctx.faker.number.int({ min: 100, max: 255 }));
+};
+
+/**
+ * Synthesize a valid IPv6 sized to fit `ctx.bounds`. Eight groups separated
+ * by 7 colons, each group 1-4 hex digits. Min length 15 (`1:1:1:1:1:1:1:1`),
+ * max 39 (`ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff`).
+ */
+const synthesizeIpv6 = (ctx: StringContext): string => {
+  const target = Math.max(15, Math.min(39, ctx.bounds.min === ctx.bounds.max ? ctx.bounds.max : ctx.bounds.max));
+  // Distribute `target - 7` hex chars across 8 groups (7 colons).
+  const hexTotal = target - 7;
+  const base = Math.floor(hexTotal / 8);
+  const extras = hexTotal % 8;
+  const groups: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const w = Math.max(1, Math.min(4, base + (i < extras ? 1 : 0)));
+    groups.push(ctx.faker.string.hexadecimal({ prefix: ``, length: w, casing: `lower` }));
+  }
+  return groups.join(`:`);
+};
+
+/**
  * Generators keyed by the format name recorded in `ctx.format` during
  * `collectConstraints`. Each generator receives the full `ctx` and should:
  *   1. Produce a value that matches Valibot's regex for that format
@@ -85,16 +130,24 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
   },
 
   decimal: (ctx) => {
-    // faker.number.float() typically produces values like "0.5". Honor bounds by
-    // synthesizing a digit string of the requested length when faker can't help.
-    if (ctx.bounds.max < 3) {
-      const len = Math.max(1, Math.min(ctx.bounds.max, ctx.bounds.max));
-      return ctx.faker.string.numeric({ length: len, allowLeadingZeros: false });
+    // Valibot's decimal regex: /^[+-]?(?:\d*\.)?\d+$/ — any digit string is valid.
+    // faker.number.float() typically produces 3-8 char values like "0.5" or "42.71",
+    // so we retry first and fall back to direct digit synthesis when bounds are
+    // outside that range.
+    if (ctx.bounds.max >= 3 && ctx.bounds.min <= 8) {
+      const candidate = retryUntil(
+        () => ctx.faker.number.float().toString(),
+        (v) => withinBounds(v, ctx)
+      );
+      if (withinBounds(candidate, ctx)) return candidate;
     }
-    return retryUntil(
-      () => ctx.faker.number.float().toString(),
-      (v) => withinBounds(v, ctx)
-    );
+    // Synthesize: a pure digit string of length within bounds. Pick min when
+    // the band is narrow, else a random length within the band.
+    const len =
+      ctx.bounds.min === ctx.bounds.max
+        ? ctx.bounds.min
+        : ctx.faker.number.int({ min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) });
+    return ctx.faker.string.numeric({ length: Math.max(1, len), allowLeadingZeros: false });
   },
 
   digits: (ctx) =>
@@ -130,25 +183,44 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
       length: { min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) }
     }),
 
-  imei: (ctx) => ctx.faker.phone.imei(),
+  imei: (ctx) => {
+    // Valibot accepts both `\d{15}` and `\d{2}-\d{6}-\d{6}-\d` (15 vs 18 chars).
+    // Faker's `phone.imei()` returns the dashed form. Pick the form that fits
+    // the bounds; Luhn checksum is preserved when we strip dashes.
+    const dashed = ctx.faker.phone.imei();
+    const undashed = dashed.replace(/-/g, ``);
+    if (withinBounds(dashed, ctx)) return dashed;
+    if (withinBounds(undashed, ctx)) return undashed;
+    return dashed;
+  },
 
-  ip: (ctx) =>
-    retryUntil(
+  ip: (ctx) => {
+    const candidate = retryUntil(
       () => ctx.faker.internet.ip(),
       (v) => withinBounds(v, ctx)
-    ),
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Choose family by target length: 7-15 → IPv4, 16+ → IPv6.
+    return ctx.bounds.max <= 15 ? synthesizeIpv4(ctx) : synthesizeIpv6(ctx);
+  },
 
-  ipv4: (ctx) =>
-    retryUntil(
+  ipv4: (ctx) => {
+    const candidate = retryUntil(
       () => ctx.faker.internet.ipv4(),
       (v) => withinBounds(v, ctx)
-    ),
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    return synthesizeIpv4(ctx);
+  },
 
-  ipv6: (ctx) =>
-    retryUntil(
+  ipv6: (ctx) => {
+    const candidate = retryUntil(
       () => ctx.faker.internet.ipv6(),
       (v) => withinBounds(v, ctx)
-    ),
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    return synthesizeIpv6(ctx);
+  },
 
   // Valibot's ISO regexes are strict; produce exactly what each one accepts.
   // These are all fixed-length so bounds either match or generation is unsatisfiable.
