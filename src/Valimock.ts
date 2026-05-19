@@ -3,6 +3,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import * as v from "valibot";
+import { generateBigint } from "./bigint/generateBigint.js";
+import { generateDate } from "./date/generateDate.js";
 import { generateNumber } from "./number/generateNumber.js";
 import { generateString } from "./string/generateString.js";
 import type {
@@ -134,26 +136,6 @@ export class Valimock {
       )
     );
 
-  /**
-   * Collect each validation action's `requirement` directly from the pipe. Avoids
-   * the string-stripping (`.replace('>=','')`) that the older `#getChecks` form
-   * required, and lets handlers see the raw value (number / bigint / Date / array).
-   */
-  #getRequirements = (
-    pipe: ReadonlyArray<v.GenericPipeItem | v.GenericPipeItemAsync> | undefined
-  ): Record<string, unknown> => {
-    if (!pipe) return {};
-    const out: Record<string, unknown> = {};
-    for (const item of pipe) {
-      if (v.isOfKind(`validation`, item) && `requirement` in item) {
-        out[item.type] = (item as { requirement: unknown }).requirement;
-      } else if (v.isOfKind(`validation`, item)) {
-        out[item.type] = true; // requirement-less actions like `integer`, `finite`, `safe_integer`
-      }
-    }
-    return out;
-  };
-
   #getValidEnumValues = (obj: v.Enum): Array<number | string> =>
     Object.values(
       Object.entries(obj).reduce(
@@ -226,30 +208,11 @@ export class Valimock {
 
   #mockBigint = (
     schema: SchemaMaybeWithPipe<v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>>
-  ): v.InferOutput<typeof schema> => {
-    const reqs = this.#getRequirements(schema.pipe);
-
-    if (typeof reqs.value === `bigint`) return reqs.value;
-    if (Array.isArray(reqs.values) && reqs.values.length > 0) {
-      const allowed = reqs.values.filter((v): v is bigint => typeof v === `bigint`);
-      if (allowed.length > 0) return this.options.faker.helpers.arrayElement(allowed);
-    }
-
-    const min =
-      typeof reqs.min_value === `bigint`
-        ? reqs.min_value
-        : typeof reqs.gt_value === `bigint`
-          ? reqs.gt_value + 1n
-          : undefined;
-    const max =
-      typeof reqs.max_value === `bigint`
-        ? reqs.max_value
-        : typeof reqs.lt_value === `bigint`
-          ? reqs.lt_value - 1n
-          : undefined;
-
-    return this.options.faker.number.bigInt({ min, max });
-  };
+  ): v.InferOutput<typeof schema> =>
+    generateBigint(schema, {
+      faker: this.options.faker,
+      onWarn: this.options.onWarn
+    });
 
   #mockBoolean = (
     schema: SchemaMaybeWithPipe<v.BooleanSchema<v.ErrorMessage<v.BooleanIssue> | undefined>>
@@ -257,19 +220,11 @@ export class Valimock {
 
   #mockDate = (
     schema: SchemaMaybeWithPipe<v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>>
-  ): v.InferOutput<typeof schema> => {
-    const reqs = this.#getRequirements(schema.pipe);
-
-    if (reqs.value instanceof Date) return reqs.value;
-
-    const min = reqs.min_value instanceof Date ? reqs.min_value : undefined;
-    const max = reqs.max_value instanceof Date ? reqs.max_value : undefined;
-
-    if (min && max) return this.options.faker.date.between({ from: min, to: max });
-    if (min) return this.options.faker.date.soon({ refDate: min });
-    if (max) return this.options.faker.date.recent({ refDate: max });
-    return this.options.faker.date.soon();
-  };
+  ): v.InferOutput<typeof schema> =>
+    generateDate(schema, {
+      faker: this.options.faker,
+      onWarn: this.options.onWarn
+    });
 
   #mockPicklist = (
     schema: v.PicklistSchema<v.PicklistOptions, v.ErrorMessage<v.PicklistIssue> | undefined>
