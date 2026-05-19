@@ -1,0 +1,23 @@
+name: Bumpy Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  bumpy-check:
+    name: Release Plan
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "lts"
+          cache: true
+
+      - run: vp dlx @varlock/bumpy ci check
+        env:
+          GH_TOKEN: ${{ github.token }}

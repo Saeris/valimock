@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { pipe, pipeAsync, parse, parseAsync, number, maxValue, integer, minValue, value } from "valibot";
 import { Valimock } from "../Valimock.js";
 

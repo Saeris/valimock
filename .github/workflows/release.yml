@@ -2,40 +2,86 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions: {}
+# id-token must be at the workflow level for OIDC trusted publishing.
+# Job-level permissions blocks replace (not merge) workflow-level ones, which
+# can cause workflow_dispatch triggers to silently lose id-token access.
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
 
 jobs:
-  release:
-    if: github.repository == 'saeris/valimock'
-    permissions:
-      contents: write
-      pull-requests: write
-    name: Release
+  changes:
+    name: Detect Changes
+    if: github.repository == 'Saeris/valimock'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.result.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            version:
+              - 'package.json'
+      - id: result
+        run: echo "version=${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.version }}" >> $GITHUB_OUTPUT
+
+  bump:
+    name: Bump
+    needs: [changes]
+    if: needs.changes.outputs.version == 'false'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v6
         with:
-          node-version: 22
-          cache: "yarn"
+          fetch-depth: 0
 
-      - name: Install Dependencies
-        run: yarn install --immutable
-
-      - name: Create Release Pull Request or Publish to npm
-        id: changesets
-        uses: changesets/action@v1
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          publish: yarn release
-          version: yarn changeset version
+          node-version: "lts"
+          cache: true
+
+      - run: vp dlx @varlock/bumpy ci plan
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+
+      - run: vp dlx @varlock/bumpy ci release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMPY_GH_TOKEN: ${{ secrets.BUMPY_GH_TOKEN }}
+          # Yarn 4 corrupts the tarball path Bumpy captures from stdout if
+          # color codes are enabled. NO_COLOR alone is not enough for Yarn 4.
+          NO_COLOR: "1"
+          YARN_ENABLE_COLORS: "false"
+
+  publish:
+    name: Publish
+    needs: [changes]
+    if: needs.changes.outputs.version == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "lts"
+          cache: true
+          registry-url: "https://registry.npmjs.org"
+
+      - run: vp pack
+
+      - run: vp dlx @varlock/bumpy ci release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMPY_GH_TOKEN: ${{ secrets.BUMPY_GH_TOKEN }}
+          NO_COLOR: "1"
+          YARN_ENABLE_COLORS: "false"

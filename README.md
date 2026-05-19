@@ -52,21 +52,21 @@ describe(`example test`, () => {
 
 |            | Implemented | Incomplete | Not Implemented | Unsupported |
 | ---------- | :---------: | :--------: | :-------------: | :---------: |
-| **Symbol** |     ✔      |     ⚠     |       ❌        |     ➖      |
+| **Symbol** |      ✔      |     ⚠      |       ❌        |     ➖      |
 
 ### Schemas
 
 |      Any       |      Array      |    Bigint     |     Blob      |   Boolean   |    Date     |      Enum       |
 | :------------: | :-------------: | :-----------: | :-----------: | :---------: | :---------: | :-------------: |
-|       ❌       |       ✔        |      ✔       |      ➖       |     ✔      |     ⚠      |       ✔        |
+|       ❌       |        ✔        |       ✔       |      ➖       |      ✔      |      ⚠      |        ✔        |
 |  **Instance**  |  **Intersect**  |  **Literal**  |    **Map**    |   **NaN**   |  **Never**  | **NonNullable** |
-|       ➖       |       ✔        |      ✔       |      ✔       |     ✔      |     ❌      |       ✔        |
+|       ➖       |        ✔        |       ✔       |       ✔       |      ✔      |     ❌      |        ✔        |
 | **NonNullish** | **NonOptional** |   **Null**    | **Nullable**  | **Nullish** | **Number**  |   **Object**    |
-|       ✔       |       ✔        |      ✔       |      ✔       |     ✔      |     ⚠      |       ✔        |
+|       ✔        |        ✔        |       ✔       |       ✔       |      ✔      |      ⚠      |        ✔        |
 |  **Optional**  |  **Picklist**   |  **Record**   | **Recursive** |   **Set**   | **Special** |   **String**    |
-|       ✔       |       ✔        |      ✔       |      ✔       |     ✔      |     ➖      |       ⚠        |
+|       ✔        |        ✔        |       ✔       |       ✔       |      ✔      |     ➖      |        ⚠        |
 |   **Symbol**   |    **Tuple**    | **Undefined** |   **Union**   | **Unknown** | **Variant** |    **Void**     |
-|       ➖       |       ✔        |      ✔       |      ✔       |     ❌      |     ❌      |       ❌        |
+|       ➖       |        ✔        |       ✔       |       ✔       |     ❌      |     ❌      |       ❌        |
 
 ### Validations
 
@@ -76,9 +76,9 @@ Below is an incomplete list of supported validations for the given schemas.
 
 |     check     |    checkItems    |     empty     |   everyItem   |   excludes   |
 | :-----------: | :--------------: | :-----------: | :-----------: | :----------: |
-|      ❌       |        ❌        |      ✔       |      ❌       |      ❌      |
+|      ❌       |        ❌        |       ✔       |      ❌       |      ❌      |
 | **includes**  |    **length**    | **maxLength** | **minLength** | **nonEmpty** |
-|      ❌       |        ✔        |      ✔       |      ✔       |      ✔      |
+|      ❌       |        ✔         |       ✔       |       ✔       |      ✔       |
 | **notLength** | **partialCheck** | **rawCheck**  | **someItem**  |
 |      ❌       |        ❌        |      ❌       |      ❌       |
 
@@ -86,9 +86,9 @@ Below is an incomplete list of supported validations for the given schemas.
 
 |     check      |   gtValue    |    ltValue    |   maxValue   | minValue  |
 | :------------: | :----------: | :-----------: | :----------: | :-------: |
-|       ❌       |      ❌      |      ❌       |      ✔      |    ✔     |
+|       ❌       |      ❌      |      ❌       |      ✔       |     ✔     |
 | **multipleOf** | **notValue** | **notValues** | **rawCheck** | **value** |
-|       ❌       |      ❌      |      ❌       |      ❌      |    ✔     |
+|       ❌       |      ❌      |      ❌       |      ❌      |     ✔     |
 |   **values**   |
 |       ❌       |
 
@@ -96,49 +96,49 @@ Below is an incomplete list of supported validations for the given schemas.
 
 |    check     |    gtValue    |   ltValue    | maxValue  |  minValue  |
 | :----------: | :-----------: | :----------: | :-------: | :--------: |
-|      ❌      |      ❌       |      ❌      |    ✔     |     ✔     |
+|      ❌      |      ❌       |      ❌      |     ✔     |     ✔      |
 | **notValue** | **notValues** | **rawCheck** | **value** | **values** |
-|      ❌      |      ❌       |      ❌      |    ✔     |     ❌     |
+|      ❌      |      ❌       |      ❌      |     ✔     |     ❌     |
 
 #### Number
 
 |    check     |     finite      |    gtValue     |   integer    |    ltValue    |
 | :----------: | :-------------: | :------------: | :----------: | :-----------: |
-|      ❌      |       ❌        |       ❌       |      ✔      |      ❌       |
+|      ❌      |       ❌        |       ❌       |      ✔       |      ❌       |
 | **maxValue** |  **minValue**   | **multipleOf** | **notValue** | **notValues** |
-|      ✔      |       ✔        |       ❌       |      ❌      |      ❌       |
+|      ✔       |        ✔        |       ❌       |      ❌      |      ❌       |
 | **rawCheck** | **safeInteger** |   **value**    |  **values**  |
-|      ❌      |       ❌        |       ✔       |      ❌      |
+|      ❌      |       ❌        |       ✔        |      ❌      |
 
 #### String
 
 |      base64      |        bic        |      bytes       |    creditCard    |      cuid2      |
 | :--------------: | :---------------: | :--------------: | :--------------: | :-------------: |
-|        ✔        |        ✔         |        ❌        |        ✔        |       ✔        |
+|        ✔         |         ✔         |        ❌        |        ✔         |        ✔        |
 |      check       |      decimal      |    **digits**    |    **email**     |    **emoji**    |
-|        ❌        |        ✔         |        ✔        |        ✔        |       ✔        |
+|        ❌        |         ✔         |        ✔         |        ✔         |        ✔        |
 |    **empty**     |   **endsWith**    |   **excludes**   |  **graphemes**   |   **gtValue**   |
-|        ✔        |        ❌         |        ❌        |        ❌        |       ❌        |
+|        ✔         |        ❌         |        ❌        |        ❌        |       ❌        |
 |     **hash**     |  **hexadecimal**  |   **hexColor**   |     **imei**     |  **includes**   |
-|        ❌        |        ✔         |        ✔        |        ✔        |       ❌        |
+|        ❌        |         ✔         |        ✔         |        ✔         |       ❌        |
 |      **ip**      |     **ipv4**      |     **ipv6**     |   **isoDate**    | **isoDateTime** |
-|        ✔        |        ✔         |        ✔        |        ✔        |       ✔        |
+|        ✔         |         ✔         |        ✔         |        ✔         |        ✔        |
 |   **isoTime**    | **isoTimeSecond** | **isoTimestamp** |   **isoWeek**    |   **length**    |
-|        ✔        |        ✔         |        ✔        |        ❌        |       ✔        |
+|        ✔         |         ✔         |        ✔         |        ❌        |        ✔        |
 |   **ltValue**    |      **mac**      |    **mac48**     |    **mac64**     |  **maxBytes**   |
-|        ❌        |        ✔         |        ❌        |        ❌        |       ❌        |
+|        ❌        |         ✔         |        ❌        |        ❌        |       ❌        |
 | **maxGraphemes** |   **maxLength**   |   **maxValue**   |   **maxWords**   |  **minBytes**   |
-|        ❌        |        ✔         |        ❌        |        ❌        |       ❌        |
+|        ❌        |         ✔         |        ❌        |        ❌        |       ❌        |
 | **minGraphemes** |   **minLength**   |   **minValue**   |   **minWords**   |   **nanoid**    |
-|        ❌        |        ✔         |        ❌        |        ❌        |       ✔        |
+|        ❌        |         ✔         |        ❌        |        ❌        |        ✔        |
 |   **nonEmpty**   |   **notBytes**    |  **notEntries**  | **notGraphemes** |  **notLength**  |
-|        ✔        |        ❌         |        ❌        |        ❌        |       ❌        |
+|        ✔         |        ❌         |        ❌        |        ❌        |       ❌        |
 |   **notValue**   |   **notValues**   |   **notWords**   |    **octal**     |  **rawCheck**   |
-|        ❌        |        ❌         |        ❌        |        ✔        |       ❌        |
+|        ❌        |        ❌         |        ❌        |        ✔         |       ❌        |
 |    **regex**     |   **rfcEmail**    |     **slug**     |  **startsWith**  |    **ulid**     |
-|        ✔        |        ❌         |        ❌        |        ❌        |       ✔        |
+|        ✔         |        ❌         |        ❌        |        ❌        |        ✔        |
 |     **url**      |     **uuid**      |    **value**     |    **values**    |    **words**    |
-|        ✔        |        ✔         |        ❌        |        ❌        |       ❌        |
+|        ✔         |         ✔         |        ❌        |        ❌        |       ❌        |
 
 ## 📣 Acknowledgements
 

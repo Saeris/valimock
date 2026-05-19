@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/prefer-enum-initializers */
 /* eslint-disable @typescript-eslint/prefer-literal-enum-member */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 

@@ -14,7 +14,7 @@ import type {
   RequiredSchema
 } from "./types.js";
 
-const retry = <T extends (options?: unknown) => unknown>(fn: T, options?: Parameters<T>[0]): string => {
+const retry = <Options>(fn: (options?: Options) => unknown, options?: Options): string => {
   const result = fn(options);
   if (typeof result === `string` && result.length > 0) {
     return result;
@@ -92,14 +92,14 @@ export class Valimock {
     customMocks: {},
     mockeryMapper: (keyName: string | undefined, fakerInstance: Faker): FakerFunction | undefined => {
       const keyToFnMap: Record<string, FakerFunction> = {
-        image: fakerInstance.image.url,
-        imageurl: fakerInstance.image.url,
-        number: fakerInstance.number.int,
-        float: fakerInstance.number.float,
-        hexadecimal: fakerInstance.number.hex,
-        uuid: fakerInstance.string.uuid,
-        boolean: fakerInstance.datatype.boolean,
-        city: fakerInstance.location.city
+        image: (): string => fakerInstance.image.url(),
+        imageurl: (): string => fakerInstance.image.url(),
+        number: (): number => fakerInstance.number.int(),
+        float: (): number => fakerInstance.number.float(),
+        hexadecimal: (): string => fakerInstance.number.hex(),
+        uuid: (): string => fakerInstance.string.uuid(),
+        boolean: (): boolean => fakerInstance.datatype.boolean(),
+        city: (): string => fakerInstance.location.city()
       };
 
       if (typeof keyName === `string` && keyName.toLowerCase() in keyToFnMap) {
@@ -108,56 +108,55 @@ export class Valimock {
     }
   };
 
-  #stringGenerators: Record<string, (...args: unknown[]) => string> = {
-    default: (length: number): string =>
-      length > 10 ? this.options.faker.lorem.word() : this.options.faker.lorem.word({ length }),
-    email: this.options.faker.internet.exampleEmail,
-    uuid: this.options.faker.string.uuid,
-    uid: this.options.faker.string.uuid,
-    url: this.options.faker.internet.url,
-    name: this.options.faker.person.fullName,
+  #stringGenerators: Record<string, () => string> = {
+    default: (): string => this.options.faker.lorem.word(),
+    email: (): string => this.options.faker.internet.exampleEmail(),
+    uuid: (): string => this.options.faker.string.uuid(),
+    uid: (): string => this.options.faker.string.uuid(),
+    url: (): string => this.options.faker.internet.url(),
+    name: (): string => this.options.faker.person.fullName(),
     date: (): string => this.options.faker.date.recent().toISOString(),
     dateTime: (): string => this.options.faker.date.recent().toISOString(),
-    colorHex: this.options.faker.color.rgb,
-    color: this.options.faker.color.rgb,
-    backgroundColor: this.options.faker.color.rgb,
-    textShadow: this.options.faker.color.rgb,
-    textColor: this.options.faker.color.rgb,
-    textDecorationColor: this.options.faker.color.rgb,
-    borderColor: this.options.faker.color.rgb,
-    borderTopColor: this.options.faker.color.rgb,
-    borderRightColor: this.options.faker.color.rgb,
-    borderBottomColor: this.options.faker.color.rgb,
-    borderLeftColor: this.options.faker.color.rgb,
-    borderBlockStartColor: this.options.faker.color.rgb,
-    borderBlockEndColor: this.options.faker.color.rgb,
-    borderInlineStartColor: this.options.faker.color.rgb,
-    borderInlineEndColor: this.options.faker.color.rgb,
-    columnRuleColor: this.options.faker.color.rgb,
-    outlineColor: this.options.faker.color.rgb,
-    phoneNumber: this.options.faker.phone.number,
-    username: this.options.faker.internet.username,
-    displayName: this.options.faker.internet.displayName,
-    firstName: this.options.faker.person.firstName,
-    middleName: this.options.faker.person.middleName,
-    lastName: this.options.faker.person.lastName,
-    fullName: this.options.faker.person.fullName,
-    gender: this.options.faker.person.gender,
-    sex: this.options.faker.person.sex,
-    zodiacSign: this.options.faker.person.zodiacSign,
-    isbn: this.options.faker.commerce.isbn,
-    iban: this.options.faker.finance.iban,
-    vin: this.options.faker.vehicle.vin,
-    vrm: this.options.faker.vehicle.vrm
+    colorHex: (): string => this.options.faker.color.rgb(),
+    color: (): string => this.options.faker.color.rgb(),
+    backgroundColor: (): string => this.options.faker.color.rgb(),
+    textShadow: (): string => this.options.faker.color.rgb(),
+    textColor: (): string => this.options.faker.color.rgb(),
+    textDecorationColor: (): string => this.options.faker.color.rgb(),
+    borderColor: (): string => this.options.faker.color.rgb(),
+    borderTopColor: (): string => this.options.faker.color.rgb(),
+    borderRightColor: (): string => this.options.faker.color.rgb(),
+    borderBottomColor: (): string => this.options.faker.color.rgb(),
+    borderLeftColor: (): string => this.options.faker.color.rgb(),
+    borderBlockStartColor: (): string => this.options.faker.color.rgb(),
+    borderBlockEndColor: (): string => this.options.faker.color.rgb(),
+    borderInlineStartColor: (): string => this.options.faker.color.rgb(),
+    borderInlineEndColor: (): string => this.options.faker.color.rgb(),
+    columnRuleColor: (): string => this.options.faker.color.rgb(),
+    outlineColor: (): string => this.options.faker.color.rgb(),
+    phoneNumber: (): string => this.options.faker.phone.number(),
+    username: (): string => this.options.faker.internet.username(),
+    displayName: (): string => this.options.faker.internet.displayName(),
+    firstName: (): string => this.options.faker.person.firstName(),
+    middleName: (): string => this.options.faker.person.middleName(),
+    lastName: (): string => this.options.faker.person.lastName(),
+    fullName: (): string => this.options.faker.person.fullName(),
+    gender: (): string => this.options.faker.person.gender(),
+    sex: (): string => this.options.faker.person.sex(),
+    zodiacSign: (): string => this.options.faker.person.zodiacSign(),
+    isbn: (): string => this.options.faker.commerce.isbn(),
+    iban: (): string => this.options.faker.finance.iban(),
+    vin: (): string => this.options.faker.vehicle.vin(),
+    vrm: (): string => this.options.faker.vehicle.vrm()
   };
 
-  #stringValidations = {
+  #stringValidations: Record<string, (options?: { length: { min: number; max: number } }) => string> = {
     base64: (): string =>
       this.options.faker.string.hexadecimal({
         prefix: ``,
         length: 64
       }),
-    bic: this.options.faker.finance.bic,
+    bic: (): string => this.options.faker.finance.bic(),
     credit_card: (): string =>
       this.options.faker.finance.creditCardNumber({
         issuer: this.options.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
@@ -168,28 +167,28 @@ export class Valimock {
         ...options
       }),
     decimal: (): string => this.options.faker.number.float().toString(),
-    email: this.options.faker.internet.email,
-    emoji: this.options.faker.internet.emoji,
+    email: (): string => this.options.faker.internet.email(),
+    emoji: (): string => this.options.faker.internet.emoji(),
     hexadecimal: (options): string =>
       this.options.faker.string.hexadecimal({
         prefix: ``,
         ...options
       }),
-    hex_color: this.options.faker.color.rgb,
-    imei: this.options.faker.phone.imei,
-    ip: this.options.faker.internet.ip,
-    ipv4: this.options.faker.internet.ipv4,
-    ipv6: this.options.faker.internet.ipv6,
-    mac: this.options.faker.internet.mac,
-    nanoid: this.options.faker.string.nanoid,
+    hex_color: (): string => this.options.faker.color.rgb(),
+    imei: (): string => this.options.faker.phone.imei(),
+    ip: (): string => this.options.faker.internet.ip(),
+    ipv4: (): string => this.options.faker.internet.ipv4(),
+    ipv6: (): string => this.options.faker.internet.ipv6(),
+    mac: (): string => this.options.faker.internet.mac(),
+    nanoid: (): string => this.options.faker.string.nanoid(),
     octal: (options): string =>
       this.options.faker.string.octal({
         prefix: ``,
         ...options
       }),
-    ulid: this.options.faker.string.ulid,
-    url: this.options.faker.internet.url,
-    uuid: this.options.faker.string.uuid
+    ulid: (): string => this.options.faker.string.ulid(),
+    url: (): string => this.options.faker.internet.url(),
+    uuid: (): string => this.options.faker.string.uuid()
   };
 
   constructor(options?: Partial<ValimockOptions>) {
@@ -254,7 +253,7 @@ export class Valimock {
       })
     );
     if (sectionName && fnName) {
-      const section = this.options.faker[sectionName];
+      const section = this.options.faker[sectionName as keyof Faker];
 
       return section ? section[fnName as keyof typeof section] : undefined;
     }
@@ -274,7 +273,7 @@ export class Valimock {
         return this.#mockString(schema, keyName);
       }
       if (Object.keys(this.#schemas).includes(schema.type)) {
-        return this.#schemas[schema.type](schema);
+        return this.#schemas[schema.type](schema as never);
       }
       if (Object.keys(this.options.customMocks).includes(schema.type)) {
         return this.options.customMocks[schema.type](schema, this.options);
@@ -640,7 +639,7 @@ export class Valimock {
     schema: v.VariantSchema<Key, v.VariantOptions<Key>, v.ErrorMessage<v.VariantIssue> | undefined>
   ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement(schema.options)) ?? {};
 
-  #schemas = {
+  #schemas: Record<string, (schema: never) => unknown> = {
     array: this.#mockArray,
     bigint: this.#mockBigint,
     boolean: this.#mockBoolean,
