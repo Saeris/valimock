@@ -967,6 +967,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fast-check@npm:^4.8.0":
+  version: 4.8.0
+  resolution: "fast-check@npm:4.8.0"
+  dependencies:
+    pure-rand: "npm:^8.0.0"
+  checksum: 10/32101d27e69f7f0a3ea486f1a6feee6b34c824ba14bf3efce2ad1741fcd412817ac3ed14f53ef57a55d6fe2e00038e399c4a9c62444446a6e7a1a4b04bc6b88d
+  languageName: node
+  linkType: hard
+
 "fdir@npm:^6.5.0":
   version: 6.5.0
   resolution: "fdir@npm:6.5.0"
@@ -1797,6 +1806,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pure-rand@npm:^8.0.0":
+  version: 8.4.0
+  resolution: "pure-rand@npm:8.4.0"
+  checksum: 10/baaee81b6647c89e426458fa0a6fcf51a42315db3db6a2c1c48d676813dd7cebf46dc56d352ce352c3bdfacd5a965b9c7783ba2a92f38cf2e64a9a8186469c3e
+  languageName: node
+  linkType: hard
+
 "randexp@npm:^0.5.3":
   version: 0.5.3
   resolution: "randexp@npm:0.5.3"
@@ -2097,6 +2113,7 @@ __metadata:
     "@types/node": "npm:25.8.0"
     "@varlock/bumpy": "npm:^1.7.0"
     "@vitest/coverage-v8": "npm:^4.1.6"
+    fast-check: "npm:^4.8.0"
     randexp: "npm:^0.5.3"
     typescript: "npm:6.0.3"
     valibot: "npm:^1.4.0"

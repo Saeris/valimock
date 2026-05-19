@@ -2,8 +2,8 @@
 
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
-import RandExp from "randexp";
 import * as v from "valibot";
+import { generateString } from "./string/generateString.js";
 import type {
   GenericPipe,
   GenericPipeAsync,
@@ -13,14 +13,6 @@ import type {
   MaybeRequiredSchema,
   RequiredSchema
 } from "./types.js";
-
-const retry = <Options>(fn: (options?: Options) => unknown, options?: Options): string => {
-  const result = fn(options);
-  if (typeof result === `string` && result.length > 0) {
-    return result;
-  }
-  return retry(fn, options);
-};
 
 export class MockError extends Error {
   constructor(public typeName?: string) {
@@ -55,10 +47,22 @@ export interface ValimockOptions {
   stringMap?: Record<string, (...args: any[]) => string>;
 
   /**
-   * This is a function that can be provided to match a key name with a specific mock
-   * Otherwise it searches the faker library for a matching function name
+   * @deprecated Will be removed in a future major. The string mocking pipeline now
+   * resolves Faker methods directly from a property name and via the action
+   * registry in `src/string/`. To extend mock generation, prefer adding entries
+   * to `stringMap` or contributing an action handler upstream.
+   *
+   * When a `mockeryMapper` is provided, it is consulted before Faker auto-discovery
+   * for backwards compatibility and a one-time deprecation warning is emitted.
    */
   mockeryMapper: MockeryMapper;
+
+  /**
+   * Sink for non-fatal diagnostic messages: unhandled Valibot actions, retry-budget
+   * exhaustion, and previously silently swallowed errors from `#mock`. Defaults to
+   * `console.warn`. Set to `() => {}` to silence.
+   */
+  onWarn: (message: string) => void;
 
   /**
    * This is a mapping of field name to mock generator function.
@@ -90,6 +94,7 @@ export class Valimock {
     recordKeysLength: 1,
     mapEntriesLength: 1,
     customMocks: {},
+    onWarn: (message: string): void => console.warn(`[valimock] ${message}`),
     mockeryMapper: (keyName: string | undefined, fakerInstance: Faker): FakerFunction | undefined => {
       const keyToFnMap: Record<string, FakerFunction> = {
         image: (): string => fakerInstance.image.url(),
@@ -108,88 +113,8 @@ export class Valimock {
     }
   };
 
-  #stringGenerators: Record<string, () => string> = {
-    default: (): string => this.options.faker.lorem.word(),
-    email: (): string => this.options.faker.internet.exampleEmail(),
-    uuid: (): string => this.options.faker.string.uuid(),
-    uid: (): string => this.options.faker.string.uuid(),
-    url: (): string => this.options.faker.internet.url(),
-    name: (): string => this.options.faker.person.fullName(),
-    date: (): string => this.options.faker.date.recent().toISOString(),
-    dateTime: (): string => this.options.faker.date.recent().toISOString(),
-    colorHex: (): string => this.options.faker.color.rgb(),
-    color: (): string => this.options.faker.color.rgb(),
-    backgroundColor: (): string => this.options.faker.color.rgb(),
-    textShadow: (): string => this.options.faker.color.rgb(),
-    textColor: (): string => this.options.faker.color.rgb(),
-    textDecorationColor: (): string => this.options.faker.color.rgb(),
-    borderColor: (): string => this.options.faker.color.rgb(),
-    borderTopColor: (): string => this.options.faker.color.rgb(),
-    borderRightColor: (): string => this.options.faker.color.rgb(),
-    borderBottomColor: (): string => this.options.faker.color.rgb(),
-    borderLeftColor: (): string => this.options.faker.color.rgb(),
-    borderBlockStartColor: (): string => this.options.faker.color.rgb(),
-    borderBlockEndColor: (): string => this.options.faker.color.rgb(),
-    borderInlineStartColor: (): string => this.options.faker.color.rgb(),
-    borderInlineEndColor: (): string => this.options.faker.color.rgb(),
-    columnRuleColor: (): string => this.options.faker.color.rgb(),
-    outlineColor: (): string => this.options.faker.color.rgb(),
-    phoneNumber: (): string => this.options.faker.phone.number(),
-    username: (): string => this.options.faker.internet.username(),
-    displayName: (): string => this.options.faker.internet.displayName(),
-    firstName: (): string => this.options.faker.person.firstName(),
-    middleName: (): string => this.options.faker.person.middleName(),
-    lastName: (): string => this.options.faker.person.lastName(),
-    fullName: (): string => this.options.faker.person.fullName(),
-    gender: (): string => this.options.faker.person.gender(),
-    sex: (): string => this.options.faker.person.sex(),
-    zodiacSign: (): string => this.options.faker.person.zodiacSign(),
-    isbn: (): string => this.options.faker.commerce.isbn(),
-    iban: (): string => this.options.faker.finance.iban(),
-    vin: (): string => this.options.faker.vehicle.vin(),
-    vrm: (): string => this.options.faker.vehicle.vrm()
-  };
-
-  #stringValidations: Record<string, (options?: { length: { min: number; max: number } }) => string> = {
-    base64: (): string =>
-      this.options.faker.string.hexadecimal({
-        prefix: ``,
-        length: 64
-      }),
-    bic: (): string => this.options.faker.finance.bic(),
-    credit_card: (): string =>
-      this.options.faker.finance.creditCardNumber({
-        issuer: this.options.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
-      }),
-    digits: (options): string =>
-      this.options.faker.string.numeric({
-        allowLeadingZeros: true,
-        ...options
-      }),
-    decimal: (): string => this.options.faker.number.float().toString(),
-    email: (): string => this.options.faker.internet.email(),
-    emoji: (): string => this.options.faker.internet.emoji(),
-    hexadecimal: (options): string =>
-      this.options.faker.string.hexadecimal({
-        prefix: ``,
-        ...options
-      }),
-    hex_color: (): string => this.options.faker.color.rgb(),
-    imei: (): string => this.options.faker.phone.imei(),
-    ip: (): string => this.options.faker.internet.ip(),
-    ipv4: (): string => this.options.faker.internet.ipv4(),
-    ipv6: (): string => this.options.faker.internet.ipv6(),
-    mac: (): string => this.options.faker.internet.mac(),
-    nanoid: (): string => this.options.faker.string.nanoid(),
-    octal: (options): string =>
-      this.options.faker.string.octal({
-        prefix: ``,
-        ...options
-      }),
-    ulid: (): string => this.options.faker.string.ulid(),
-    url: (): string => this.options.faker.internet.url(),
-    uuid: (): string => this.options.faker.string.uuid()
-  };
+  /** Set once per instance the first time the deprecated `mockeryMapper` is invoked. */
+  #mockeryMapperWarned = false;
 
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
@@ -215,49 +140,6 @@ export class Valimock {
         {}
       )
     );
-
-  #findMatchingFaker = (keyName?: string): FakerFunction | undefined => {
-    if (typeof keyName === `undefined`) return;
-    const lowerCaseKeyName = keyName.toLowerCase();
-    const withoutDashesUnderscores = lowerCaseKeyName.replace(/_|-/g, ``);
-    let fnName: string | undefined;
-
-    const mapped = this.options.mockeryMapper(keyName, this.options.faker);
-    if (mapped) return mapped;
-
-    const sectionName = Object.keys(this.options.faker).find((sectionKey) =>
-      Object.keys(this.options.faker[sectionKey as keyof Faker]).find((fnKey) => {
-        const lower = fnKey.toLowerCase();
-        fnName = lower === lowerCaseKeyName || lower === withoutDashesUnderscores ? keyName : undefined;
-
-        if (fnName) {
-          const fn = this.options.faker[sectionKey as keyof Faker][fnName as keyof Faker[keyof Faker]];
-
-          if (typeof fn === `function`) {
-            try {
-              // @ts-expect-error
-              const mock = fn();
-              return typeof mock === `string` ||
-                typeof mock === `number` ||
-                typeof mock === `boolean` ||
-                mock instanceof Date
-                ? fnName
-                : undefined;
-            } catch {
-              // do nothing. undefined will be returned eventually.
-            }
-          }
-        }
-
-        return undefined;
-      })
-    );
-    if (sectionName && fnName) {
-      const section = this.options.faker[sectionName as keyof Faker];
-
-      return section ? section[fnName as keyof typeof section] : undefined;
-    }
-  };
 
   mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> => this.#mock(schema);
 
@@ -286,7 +168,7 @@ export class Valimock {
         throw err;
       }
 
-      console.error(err);
+      this.options.onWarn(`Mock generation failed for schema type \`${schema.type}\`: ${String(err)}`);
     }
   };
 
@@ -533,88 +415,22 @@ export class Valimock {
   #mockString = (
     schema: SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>,
     keyName?: string
-  ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? []);
-    const bounds = {
-      min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : 0,
-      max: checks.max_length
-        ? Number(checks.max_length.replace(`<=`, ``))
-        : this.options.faker.number.int({
-            min: checks.min_length ? Number(checks.min_length.replace(`>=`, ``)) : `non_empty` in checks ? 1 : 0,
-            max: 128
-          })
-    };
-
-    if (`empty` in checks) {
-      return ``;
-    }
-
-    if (bounds.min && bounds.max && bounds.min > bounds.max) {
-      const temp = bounds.min;
-      bounds.min = bounds.max;
-      bounds.max = temp;
-    }
-
-    if (`length` in checks) {
-      bounds.min = Number(checks.length);
-      bounds.max = Number(checks.length);
-    }
-
-    if (`non_empty` in checks && bounds.min === 0) {
-      bounds.min = 1;
-    }
-
-    const targetStringLength = this.options.faker.number.int(bounds);
-
-    // First, check to see if we have a supported validation
-    const supportedValidation = Object.keys(checks).find((key) => Object.keys(this.#stringValidations).includes(key));
-    if (typeof supportedValidation === `string`) {
-      return retry(this.#stringValidations[supportedValidation], { length: bounds });
-    }
-
-    // Next, try to match a supplied Regular Expression
-    const regexCheck = schema.pipe?.find((check) => check.kind === `validation` || check.type === `regex`);
-    if (regexCheck && `requirement` in regexCheck && regexCheck.requirement instanceof RegExp) {
-      const generator = new RandExp(regexCheck.requirement);
-      generator.randInt = (min: number, max: number): number =>
-        this.options.faker.number.int({
-          min,
-          max
-        });
-      if (bounds.max) {
-        generator.max = bounds.max;
-      }
-      return generator.gen();
-    }
-
-    // Then try to match to a user-defined custom string
-    const lowerCaseKeyName = keyName?.toLowerCase();
-    if (keyName && this.options.stringMap?.[keyName]) {
-      return retry(this.options.stringMap[keyName], { length: bounds });
-    }
-
-    // If all else fails, we'll either try to match based on the
-    // key name (if the string is inside an object) or default to
-    // some Lorem Ipsum
-    const stringType =
-      Object.keys(this.#stringGenerators).find(
-        (genKey) =>
-          genKey.toLowerCase() === lowerCaseKeyName ||
-          schema.pipe?.find((item) => typeof item.type === `string` && item.type.toUpperCase() === genKey.toUpperCase())
-      ) ?? null;
-
-    const generator = stringType
-      ? (): string => retry(this.#stringGenerators[stringType])
-      : (this.#findMatchingFaker(keyName) ?? this.#stringGenerators.default);
-
-    let val = generator().toString();
-    const delta = targetStringLength - val.length;
-    if (typeof bounds.min === `number` && val.length < bounds.min) {
-      val += this.options.faker.string.alpha(delta);
-    }
-
-    return val.slice(0, bounds.max);
-  };
+  ): v.InferOutput<typeof schema> =>
+    generateString(schema, {
+      faker: this.options.faker,
+      keyName,
+      stringMap: this.options.stringMap,
+      mockeryMapper: this.options.mockeryMapper,
+      onDeprecatedMapper: () => {
+        if (this.#mockeryMapperWarned) return;
+        this.#mockeryMapperWarned = true;
+        this.options.onWarn(
+          `\`mockeryMapper\` is deprecated and will be removed in a future major. ` +
+            `Prefer \`stringMap\` for per-key overrides, or contribute an action handler upstream.`
+        );
+      },
+      onWarn: this.options.onWarn
+    });
 
   #mockTuple = (
     schema:
