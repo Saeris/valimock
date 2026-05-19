@@ -76,8 +76,16 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
  * endsWith requirements where possible. Required substrings get prepended /
  * appended / injected before length normalization. Re-run after a fresh
  * `generate()` when the first candidate is unsalvageable.
+ *
+ * When `ctx.format` is set we *skip* truncation and substring injection:
+ * mutating a format-generated value (e.g. an email or UUID) almost always
+ * breaks the regex. The retry loop will regenerate instead, and if no
+ * generation satisfies the constraint set, the orchestrator surfaces a
+ * warning rather than emitting an invalid value.
  */
 export const enforce = (value: string, ctx: StringContext): string => {
+  if (ctx.format !== undefined) return value;
+
   let out = value;
 
   if (ctx.startsWith !== undefined && !out.startsWith(ctx.startsWith)) {

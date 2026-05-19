@@ -10,7 +10,21 @@ import type { StringContext } from "./types.js";
  */
 export const formatGenerators: Record<string, (ctx: StringContext) => string> = {
   base64: (ctx) => ctx.faker.string.hexadecimal({ prefix: ``, length: 64 }),
-  bic: (ctx) => ctx.faker.finance.bic(),
+  bic: (ctx) => {
+    // Faker's BIC can include "00" in positions 7-8 (the location code), which
+    // Valibot's regex rejects via a negative lookahead. Reject and retry on
+    // the rare occurrence; falls back to an A-Z synthesizer after a few tries
+    // so we never recurse on a long unlucky streak.
+    for (let i = 0; i < 8; i++) {
+      const candidate = ctx.faker.finance.bic();
+      if (!/^.{6}00/.test(candidate)) return candidate;
+    }
+    // Last-resort synthesis: 6 uppercase letters + 2 non-"00" alphanumerics + optional 3 alphanumerics.
+    const bank = ctx.faker.string.alpha({ length: 6, casing: `upper` });
+    const location = `A${ctx.faker.string.alphanumeric({ length: 1, casing: `upper` })}`;
+    const branch = ctx.faker.string.alphanumeric({ length: 3, casing: `upper` });
+    return `${bank}${location}${branch}`;
+  },
   credit_card: (ctx) =>
     ctx.faker.finance.creditCardNumber({
       issuer: ctx.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
