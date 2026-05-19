@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import * as v from "valibot";
+import { generateNumber } from "./number/generateNumber.js";
 import { generateString } from "./string/generateString.js";
 import type {
   GenericPipe,
@@ -332,61 +333,11 @@ export class Valimock {
 
   #mockNumber = (
     schema: SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>>
-  ): v.InferOutput<typeof schema> => {
-    const reqs = this.#getRequirements(schema.pipe);
-
-    // Exact value wins over everything.
-    if (typeof reqs.value === `number`) return reqs.value;
-    // `values` action permits an allow-list — pick one.
-    if (Array.isArray(reqs.values) && reqs.values.length > 0) {
-      const allowed = reqs.values.filter((v): v is number => typeof v === `number`);
-      if (allowed.length > 0) return this.options.faker.helpers.arrayElement(allowed);
-    }
-
-    // `integer`, `safe_integer`, `finite` carry function requirements; presence
-    // alone (any non-undefined value) signals the constraint is active.
-    const isInteger = reqs.integer !== undefined || reqs.safe_integer !== undefined;
-    const min =
-      typeof reqs.min_value === `number`
-        ? reqs.min_value
-        : typeof reqs.gt_value === `number`
-          ? reqs.gt_value + (isInteger ? 1 : Number.EPSILON)
-          : 0;
-    const max =
-      typeof reqs.max_value === `number`
-        ? reqs.max_value
-        : typeof reqs.lt_value === `number`
-          ? reqs.lt_value - (isInteger ? 1 : Number.EPSILON)
-          : Math.max(min + 1, 5);
-
-    // multiple_of: snap to a value divisible by the factor within [min, max].
-    if (typeof reqs.multiple_of === `number` && reqs.multiple_of > 0) {
-      const factor = reqs.multiple_of;
-      const lo = Math.ceil(min / factor);
-      const hi = Math.floor(max / factor);
-      const k = this.options.faker.number.int({ min: lo, max: Math.max(lo, hi) });
-      return k * factor;
-    }
-
-    // not_value / not_values: regenerate until we avoid the disallowed values.
-    const forbidden = new Set<number>();
-    if (typeof reqs.not_value === `number`) forbidden.add(reqs.not_value);
-    if (Array.isArray(reqs.not_values)) {
-      for (const v of reqs.not_values) if (typeof v === `number`) forbidden.add(v);
-    }
-
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const candidate = isInteger
-        ? this.options.faker.number.int({ min, max })
-        : this.options.faker.number.float({ min, max });
-      if (!forbidden.has(candidate)) return candidate;
-    }
-    // Budget exhausted — return faker output anyway and warn.
-    this.options.onWarn(
-      `Number constraints unsatisfiable within retry budget (min=${min}, max=${max}, forbidden=${[...forbidden].join(`,`)})`
-    );
-    return isInteger ? this.options.faker.number.int({ min, max }) : this.options.faker.number.float({ min, max });
-  };
+  ): v.InferOutput<typeof schema> =>
+    generateNumber(schema, {
+      faker: this.options.faker,
+      onWarn: this.options.onWarn
+    });
 
   #mockObject = (
     schema:

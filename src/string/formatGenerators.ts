@@ -102,14 +102,25 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
       : `${bank}${location}${ctx.faker.string.alphanumeric({ length: 3, casing: `upper` })}`;
   },
 
-  credit_card: (ctx) =>
-    retryUntil(
+  credit_card: (ctx) => {
+    // Issuer length cheat sheet:
+    //   visa             13 or 16 chars
+    //   mastercard       16
+    //   american_express 15
+    //   diners_club      14
+    //   discover         16
+    //   jcb              15 or 16
+    // Pick issuers whose typical output can fit the bounds; faker's output
+    // may include separators we need to strip.
+    const allIssuers = [`visa`, `mastercard`, `american_express`, `diners_club`, `discover`, `jcb`] as const;
+    return retryUntil(
       () =>
-        ctx.faker.finance.creditCardNumber({
-          issuer: ctx.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
-        }),
+        ctx.faker.finance
+          .creditCardNumber({ issuer: ctx.faker.helpers.arrayElement(allIssuers) })
+          .replace(/[-\s]/g, ``),
       (v) => withinBounds(v, ctx)
-    ),
+    );
+  },
 
   cuid2: (ctx) => {
     // Valibot's CUID2 regex requires /^[a-z][\da-z]*$/u — lowercase letter, then any lowercase alphanumerics.

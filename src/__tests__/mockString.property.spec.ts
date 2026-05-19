@@ -55,7 +55,8 @@ const mock = new Valimock({ onWarn: () => {} }).mock;
 const formats = {
   base64: { minLen: 64, maxLen: 64, build: () => base64() },
   bic: { minLen: 8, maxLen: 11, build: () => bic() },
-  credit_card: { minLen: 13, maxLen: 19, build: () => creditCard() },
+  // Once separators are stripped, faker outputs 13-16 digits (Visa min, Mastercard/Discover max).
+  credit_card: { minLen: 13, maxLen: 16, build: () => creditCard() },
   cuid2: { minLen: 24, maxLen: 256, build: () => cuid2() },
   decimal: { minLen: 3, maxLen: 32, build: () => decimal() },
   digits: { minLen: 1, maxLen: 64, build: () => digits() },
