@@ -222,16 +222,57 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
     return synthesizeIpv6(ctx);
   },
 
+  // Domain (Valibot v1.3): 1-253 chars, dot-separated labels, TLD 2-63 letters.
+  domain: (ctx) => {
+    const candidate = retryUntil(
+      () => ctx.faker.internet.domainName(),
+      (v) => withinBounds(v, ctx)
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Synthesize: `<label>.co` minimum 4 chars (`a.co`).
+    const target = Math.max(4, Math.min(64, ctx.bounds.max));
+    const labelLen = Math.max(1, target - 3);
+    return `${ctx.faker.string.alpha({ length: labelLen, casing: `lower` })}.co`;
+  },
+
+  // ISBN (Valibot v1.2): ISBN-10 or ISBN-13 with checksum, optional hyphens.
+  // Faker.commerce.isbn() reliably produces valid ISBNs.
+  isbn: (ctx) => ctx.faker.commerce.isbn(),
+
+  // ISRC (Valibot v1.3): International Standard Recording Code.
+  // /^(?:[A-Z]{2}[A-Z\d]{3}\d{7}|[A-Z]{2}-[A-Z\d]{3}-\d{2}-\d{5})$/
+  // Two forms: 12 chars (compact) or 15 chars (dashed). Synthesize directly.
+  isrc: (ctx) => {
+    const country = ctx.faker.string.alpha({ length: 2, casing: `upper` });
+    const registrant = ctx.faker.string.alphanumeric({ length: 3, casing: `upper` });
+    const compact = `${country}${registrant}${ctx.faker.string.numeric({ length: 7 })}`;
+    if (withinBounds(compact, ctx)) return compact;
+    const dashed = `${country}-${registrant}-${ctx.faker.string.numeric({ length: 2 })}-${ctx.faker.string.numeric({ length: 5 })}`;
+    return withinBounds(dashed, ctx) ? dashed : compact;
+  },
+
+  // JWS Compact (Valibot v1.3): three base64url-ish segments separated by dots.
+  // /^segment\.segment?\.segment?$/ where segments are 2-3 chars or 4n+(0..3) of `[\w-]`.
+  jws_compact: (ctx) => {
+    const segment = (): string => ctx.faker.string.alphanumeric({ length: 8 });
+    const candidate = `${segment()}.${segment()}.${segment()}`;
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Minimal valid form: 2 chars per segment + 2 dots = 8 chars.
+    return `aa.bb.cc`;
+  },
+
   // Valibot's ISO regexes are strict; produce exactly what each one accepts.
   // These are all fixed-length so bounds either match or generation is unsatisfiable.
-  // iso_date         : YYYY-MM-DD              (10)
-  // iso_date_time    : YYYY-MM-DDTHH:MM        (16)
-  // iso_time         : HH:MM                   (5)
-  // iso_time_second  : HH:MM:SS                (8)
-  // iso_timestamp    : YYYY-MM-DDTHH:MM:SS(.fff)?(Z|±HH:MM)  (24 typical)
-  // iso_week         : YYYY-Www                (8)
+  // iso_date              : YYYY-MM-DD                       (10)
+  // iso_date_time         : YYYY-MM-DDTHH:MM                 (16)
+  // iso_date_time_second  : YYYY-MM-DDTHH:MM:SS              (19)   v1.4
+  // iso_time              : HH:MM                            (5)
+  // iso_time_second       : HH:MM:SS                         (8)
+  // iso_timestamp         : YYYY-MM-DDTHH:MM:SS(.fff)?(Z|±HH:MM)  (24 typical)
+  // iso_week              : YYYY-Www                         (8)
   iso_date: (ctx) => ctx.faker.date.recent().toISOString().slice(0, 10),
   iso_date_time: (ctx) => ctx.faker.date.recent().toISOString().slice(0, 16),
+  iso_date_time_second: (ctx) => ctx.faker.date.recent().toISOString().slice(0, 19),
   iso_time: (ctx) => ctx.faker.date.recent().toISOString().slice(11, 16),
   iso_time_second: (ctx) => ctx.faker.date.recent().toISOString().slice(11, 19),
   iso_timestamp: (ctx) => ctx.faker.date.recent().toISOString(),

@@ -133,6 +133,26 @@ export class Valimock {
       )
     );
 
+  /**
+   * Collect each validation action's `requirement` directly from the pipe. Avoids
+   * the string-stripping (`.replace('>=','')`) that the older `#getChecks` form
+   * required, and lets handlers see the raw value (number / bigint / Date / array).
+   */
+  #getRequirements = (
+    pipe: ReadonlyArray<v.GenericPipeItem | v.GenericPipeItemAsync> | undefined
+  ): Record<string, unknown> => {
+    if (!pipe) return {};
+    const out: Record<string, unknown> = {};
+    for (const item of pipe) {
+      if (v.isOfKind(`validation`, item) && `requirement` in item) {
+        out[item.type] = (item as { requirement: unknown }).requirement;
+      } else if (v.isOfKind(`validation`, item)) {
+        out[item.type] = true; // requirement-less actions like `integer`, `finite`, `safe_integer`
+      }
+    }
+    return out;
+  };
+
   #getValidEnumValues = (obj: v.Enum): Array<number | string> =>
     Object.values(
       Object.entries(obj).reduce(
@@ -206,14 +226,28 @@ export class Valimock {
   #mockBigint = (
     schema: SchemaMaybeWithPipe<v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>>
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? [schema]);
+    const reqs = this.#getRequirements(schema.pipe);
 
-    return checks.value
-      ? BigInt(checks.value)
-      : this.options.faker.number.bigInt({
-          min: checks.min_value ? BigInt(checks.min_value.replace(`>=`, ``)) : undefined,
-          max: checks.max_value ? BigInt(checks.max_value.replace(`<=`, ``)) : undefined
-        });
+    if (typeof reqs.value === `bigint`) return reqs.value;
+    if (Array.isArray(reqs.values) && reqs.values.length > 0) {
+      const allowed = reqs.values.filter((v): v is bigint => typeof v === `bigint`);
+      if (allowed.length > 0) return this.options.faker.helpers.arrayElement(allowed);
+    }
+
+    const min =
+      typeof reqs.min_value === `bigint`
+        ? reqs.min_value
+        : typeof reqs.gt_value === `bigint`
+          ? reqs.gt_value + 1n
+          : undefined;
+    const max =
+      typeof reqs.max_value === `bigint`
+        ? reqs.max_value
+        : typeof reqs.lt_value === `bigint`
+          ? reqs.lt_value - 1n
+          : undefined;
+
+    return this.options.faker.number.bigInt({ min, max });
   };
 
   #mockBoolean = (
@@ -223,33 +257,17 @@ export class Valimock {
   #mockDate = (
     schema: SchemaMaybeWithPipe<v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>>
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? []);
+    const reqs = this.#getRequirements(schema.pipe);
 
-    if (checks.value) {
-      return new Date(checks.value);
-    }
+    if (reqs.value instanceof Date) return reqs.value;
 
-    const bounds = {
-      min: checks.min_value ? new Date(checks.min_value.replace(`>=`, ``)) : undefined,
-      max: checks.max_value ? new Date(checks.max_value.replace(`<=`, ``)) : undefined
-    };
+    const min = reqs.min_value instanceof Date ? reqs.min_value : undefined;
+    const max = reqs.max_value instanceof Date ? reqs.max_value : undefined;
 
-    let result = this.options.faker.date.soon();
-
-    if (bounds.min instanceof Date && bounds.max instanceof Date) {
-      result = this.options.faker.date.between({
-        from: bounds.min,
-        to: bounds.max
-      });
-    }
-    if (bounds.min instanceof Date && typeof bounds.max === `undefined`) {
-      result = this.options.faker.date.soon({ refDate: bounds.min });
-    }
-    if (typeof bounds.min === `undefined` && bounds.max instanceof Date) {
-      result = this.options.faker.date.recent({ refDate: bounds.max });
-    }
-
-    return result;
+    if (min && max) return this.options.faker.date.between({ from: min, to: max });
+    if (min) return this.options.faker.date.soon({ refDate: min });
+    if (max) return this.options.faker.date.recent({ refDate: max });
+    return this.options.faker.date.soon();
   };
 
   #mockPicklist = (
@@ -315,23 +333,59 @@ export class Valimock {
   #mockNumber = (
     schema: SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>>
   ): v.InferOutput<typeof schema> => {
-    const checks = this.#getChecks(schema.pipe ?? []);
+    const reqs = this.#getRequirements(schema.pipe);
 
-    const isInteger = `integer` in checks;
-    const bounds = {
-      min: checks.min_value ? Number(checks.min_value.replace(`>=`, ``)) : 0,
-      max: checks.max_value
-        ? Number(checks.max_value.replace(`<=`, ``))
-        : checks.min_value
-          ? Number(checks.min_value.replace(`>=`, ``)) + 1
-          : 5
-    };
+    // Exact value wins over everything.
+    if (typeof reqs.value === `number`) return reqs.value;
+    // `values` action permits an allow-list — pick one.
+    if (Array.isArray(reqs.values) && reqs.values.length > 0) {
+      const allowed = reqs.values.filter((v): v is number => typeof v === `number`);
+      if (allowed.length > 0) return this.options.faker.helpers.arrayElement(allowed);
+    }
 
-    return checks.value
-      ? Number(checks.value)
-      : isInteger
-        ? this.options.faker.number.int(bounds)
-        : this.options.faker.number.float(bounds);
+    // `integer`, `safe_integer`, `finite` carry function requirements; presence
+    // alone (any non-undefined value) signals the constraint is active.
+    const isInteger = reqs.integer !== undefined || reqs.safe_integer !== undefined;
+    const min =
+      typeof reqs.min_value === `number`
+        ? reqs.min_value
+        : typeof reqs.gt_value === `number`
+          ? reqs.gt_value + (isInteger ? 1 : Number.EPSILON)
+          : 0;
+    const max =
+      typeof reqs.max_value === `number`
+        ? reqs.max_value
+        : typeof reqs.lt_value === `number`
+          ? reqs.lt_value - (isInteger ? 1 : Number.EPSILON)
+          : Math.max(min + 1, 5);
+
+    // multiple_of: snap to a value divisible by the factor within [min, max].
+    if (typeof reqs.multiple_of === `number` && reqs.multiple_of > 0) {
+      const factor = reqs.multiple_of;
+      const lo = Math.ceil(min / factor);
+      const hi = Math.floor(max / factor);
+      const k = this.options.faker.number.int({ min: lo, max: Math.max(lo, hi) });
+      return k * factor;
+    }
+
+    // not_value / not_values: regenerate until we avoid the disallowed values.
+    const forbidden = new Set<number>();
+    if (typeof reqs.not_value === `number`) forbidden.add(reqs.not_value);
+    if (Array.isArray(reqs.not_values)) {
+      for (const v of reqs.not_values) if (typeof v === `number`) forbidden.add(v);
+    }
+
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const candidate = isInteger
+        ? this.options.faker.number.int({ min, max })
+        : this.options.faker.number.float({ min, max });
+      if (!forbidden.has(candidate)) return candidate;
+    }
+    // Budget exhausted — return faker output anyway and warn.
+    this.options.onWarn(
+      `Number constraints unsatisfiable within retry budget (min=${min}, max=${max}, forbidden=${[...forbidden].join(`,`)})`
+    );
+    return isInteger ? this.options.faker.number.int({ min, max }) : this.options.faker.number.float({ min, max });
   };
 
   #mockObject = (

@@ -65,7 +65,9 @@ const formats = {
   emoji: { minLen: 1, maxLen: 2, build: () => emoji() },
   hex_color: { minLen: 7, maxLen: 7, build: () => hexColor() },
   hexadecimal: { minLen: 1, maxLen: 64, build: () => hexadecimal() },
-  imei: { minLen: 15, maxLen: 17, build: () => imei() },
+  // IMEI has exactly two valid lengths: 15 (digits-only) or 18 (dashed groups).
+  // Lengths 16-17 are unsatisfiable. Use a generous max here; satisfiability filter handles it.
+  imei: { minLen: 15, maxLen: 18, build: () => imei() },
   ip: { minLen: 7, maxLen: 39, build: () => ip() },
   ipv4: { minLen: 7, maxLen: 15, build: () => ipv4() },
   ipv6: { minLen: 15, maxLen: 39, build: () => ipv6() },
@@ -117,6 +119,9 @@ const stringSchemaArb = fc
     if (formatKey === undefined || bounds === undefined) return true;
     const fmt = formats[formatKey];
     if (bounds.kind === `empty`) return false; // every format requires at least one char
+    // IMEI uniquely has only two valid lengths (15 and 18); reject any exact
+    // length in between.
+    if (formatKey === `imei` && bounds.kind === `exact` && bounds.len !== 15 && bounds.len !== 18) return false;
     if (bounds.kind === `exact`) return bounds.len >= fmt.minLen && bounds.len <= fmt.maxLen;
     if (bounds.kind === `range`) return bounds.min <= fmt.maxLen && bounds.max >= fmt.minLen;
     if (bounds.kind === `max`) return bounds.max >= fmt.minLen;
