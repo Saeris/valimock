@@ -1,68 +1,163 @@
 import type { StringContext } from "./types.js";
 
+/** Per-generator retry budget when faker output needs to be filtered or length-bound. */
+const FORMAT_RETRY_BUDGET = 8;
+
+/**
+ * Call `produce` repeatedly until `predicate(value)` is true or the budget is
+ * exhausted. Returns the last produced value either way — callers either get a
+ * satisfying candidate or fall through to the orchestrator's retry loop /
+ * unsatisfiable-warning path.
+ */
+const retryUntil = (produce: () => string, predicate: (value: string) => boolean): string => {
+  let value = produce();
+  for (let i = 0; i < FORMAT_RETRY_BUDGET; i++) {
+    if (predicate(value)) return value;
+    value = produce();
+  }
+  return value;
+};
+
+/** True iff `value.length` falls inside `ctx.bounds`. */
+const withinBounds = (value: string, ctx: StringContext): boolean =>
+  value.length >= ctx.bounds.min && value.length <= ctx.bounds.max;
+
 /**
  * Generators keyed by the format name recorded in `ctx.format` during
- * `collectConstraints`. Keyed by Valibot's action `type` so the format selector
- * and the generator look up the same string.
+ * `collectConstraints`. Each generator receives the full `ctx` and should:
+ *   1. Produce a value that matches Valibot's regex for that format
+ *   2. Honor `ctx.bounds` when the format permits variable length, retrying
+ *      faker calls or synthesizing a fitting value
+ *   3. If bounds cannot be satisfied (e.g. `uuid` with `length(10)`), return
+ *      the format-valid value anyway — the orchestrator's `satisfies()` check
+ *      will reject it and emit an "unsatisfiable" warning rather than us
+ *      emitting an invalid-format value.
  *
  * Adding a new format means: (1) add a `setFormat(name)` entry to
  * actionHandlers, and (2) add a matching generator here.
  */
 export const formatGenerators: Record<string, (ctx: StringContext) => string> = {
   base64: (ctx) => ctx.faker.string.hexadecimal({ prefix: ``, length: 64 }),
+
   bic: (ctx) => {
-    // Faker's BIC can include "00" in positions 7-8 (the location code), which
-    // Valibot's regex rejects via a negative lookahead. Reject and retry on
-    // the rare occurrence; falls back to an A-Z synthesizer after a few tries
-    // so we never recurse on a long unlucky streak.
-    for (let i = 0; i < 8; i++) {
-      const candidate = ctx.faker.finance.bic();
-      if (!/^.{6}00/.test(candidate)) return candidate;
-    }
-    // Last-resort synthesis: 6 uppercase letters + 2 non-"00" alphanumerics + optional 3 alphanumerics.
+    // Faker's BIC can include "00" at positions 7-8 (location code), which
+    // Valibot's regex rejects via a negative lookahead. Retry around it, then
+    // fall back to synthesis after the budget.
+    const candidate = retryUntil(
+      () => ctx.faker.finance.bic(),
+      (v) => !/^.{6}00/.test(v) && withinBounds(v, ctx)
+    );
+    if (!/^.{6}00/.test(candidate) && withinBounds(candidate, ctx)) return candidate;
+    // Synthesized fallback: 6 uppercase letters + 2 non-"00" alphanumerics + optional 3 alphanumerics.
+    const len = Math.min(11, Math.max(8, ctx.bounds.min, Math.min(11, ctx.bounds.max)));
     const bank = ctx.faker.string.alpha({ length: 6, casing: `upper` });
     const location = `A${ctx.faker.string.alphanumeric({ length: 1, casing: `upper` })}`;
-    const branch = ctx.faker.string.alphanumeric({ length: 3, casing: `upper` });
-    return `${bank}${location}${branch}`;
+    return len <= 8
+      ? `${bank}${location}`
+      : `${bank}${location}${ctx.faker.string.alphanumeric({ length: 3, casing: `upper` })}`;
   },
+
   credit_card: (ctx) =>
-    ctx.faker.finance.creditCardNumber({
-      issuer: ctx.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
-    }),
+    retryUntil(
+      () =>
+        ctx.faker.finance.creditCardNumber({
+          issuer: ctx.faker.helpers.arrayElement([`american_express`, `diners_club`, `jcb`, `mastercard`])
+        }),
+      (v) => withinBounds(v, ctx)
+    ),
+
   cuid2: (ctx) => {
     // Valibot's CUID2 regex requires /^[a-z][\da-z]*$/u — lowercase letter, then any lowercase alphanumerics.
-    // Real CUID2s are 24+ chars; we honor bounds.min if higher.
+    // Real CUID2s are 24+ chars; honor bounds.min, bounded above by bounds.max.
     const length = Math.max(24, ctx.bounds.min);
+    if (length > ctx.bounds.max) {
+      // Unsatisfiable: minimum CUID2 length exceeds bounds.max. Return a 24-char
+      // value anyway and let the orchestrator's satisfies()/warning path handle it.
+      return (
+        ctx.faker.string.alpha({ length: 1, casing: `lower` }) +
+        ctx.faker.string.alphanumeric({ length: 23, casing: `lower` })
+      );
+    }
     return (
       ctx.faker.string.alpha({ length: 1, casing: `lower` }) +
       ctx.faker.string.alphanumeric({ length: length - 1, casing: `lower` })
     );
   },
-  decimal: (ctx) => ctx.faker.number.float().toString(),
+
+  decimal: (ctx) => {
+    // faker.number.float() typically produces values like "0.5". Honor bounds by
+    // synthesizing a digit string of the requested length when faker can't help.
+    if (ctx.bounds.max < 3) {
+      const len = Math.max(1, Math.min(ctx.bounds.max, ctx.bounds.max));
+      return ctx.faker.string.numeric({ length: len, allowLeadingZeros: false });
+    }
+    return retryUntil(
+      () => ctx.faker.number.float().toString(),
+      (v) => withinBounds(v, ctx)
+    );
+  },
+
   digits: (ctx) =>
     ctx.faker.string.numeric({
       allowLeadingZeros: true,
       length: { min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) }
     }),
-  email: (ctx) => ctx.faker.internet.email(),
+
+  email: (ctx) => {
+    // faker.internet.email() typically produces 15-50 char emails. If bounds.max
+    // is tight, retry with a budget then fall back to synthesizing a minimal
+    // valid email of the requested length.
+    const candidate = retryUntil(
+      () => ctx.faker.internet.email(),
+      (v) => withinBounds(v, ctx)
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Synthesize: `<local>@<domain>.<tld>`. Minimum valid form `a@b.co` = 6 chars.
+    const target = Math.max(6, Math.min(64, ctx.bounds.max));
+    const tld = `co`;
+    const fixed = `@x.${tld}`; // 6 chars including the @
+    const localLen = Math.max(1, target - fixed.length);
+    return `${ctx.faker.string.alpha({ length: localLen, casing: `lower` })}${fixed}`;
+  },
+
   emoji: (ctx) => ctx.faker.internet.emoji(),
+
   hex_color: (ctx) => ctx.faker.color.rgb(),
+
   hexadecimal: (ctx) =>
     ctx.faker.string.hexadecimal({
       prefix: ``,
       length: { min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) }
     }),
+
   imei: (ctx) => ctx.faker.phone.imei(),
-  ip: (ctx) => ctx.faker.internet.ip(),
-  ipv4: (ctx) => ctx.faker.internet.ipv4(),
-  ipv6: (ctx) => ctx.faker.internet.ipv6(),
+
+  ip: (ctx) =>
+    retryUntil(
+      () => ctx.faker.internet.ip(),
+      (v) => withinBounds(v, ctx)
+    ),
+
+  ipv4: (ctx) =>
+    retryUntil(
+      () => ctx.faker.internet.ipv4(),
+      (v) => withinBounds(v, ctx)
+    ),
+
+  ipv6: (ctx) =>
+    retryUntil(
+      () => ctx.faker.internet.ipv6(),
+      (v) => withinBounds(v, ctx)
+    ),
+
   // Valibot's ISO regexes are strict; produce exactly what each one accepts.
-  // iso_date         : YYYY-MM-DD
-  // iso_date_time    : YYYY-MM-DDTHH:MM (no seconds, no ms, no zone)
-  // iso_time         : HH:MM
-  // iso_time_second  : HH:MM:SS
-  // iso_timestamp    : YYYY-MM-DDTHH:MM:SS(.fff)?(Z|±HH:MM)
-  // iso_week         : YYYY-Www
+  // These are all fixed-length so bounds either match or generation is unsatisfiable.
+  // iso_date         : YYYY-MM-DD              (10)
+  // iso_date_time    : YYYY-MM-DDTHH:MM        (16)
+  // iso_time         : HH:MM                   (5)
+  // iso_time_second  : HH:MM:SS                (8)
+  // iso_timestamp    : YYYY-MM-DDTHH:MM:SS(.fff)?(Z|±HH:MM)  (24 typical)
+  // iso_week         : YYYY-Www                (8)
   iso_date: (ctx) => ctx.faker.date.recent().toISOString().slice(0, 10),
   iso_date_time: (ctx) => ctx.faker.date.recent().toISOString().slice(0, 16),
   iso_time: (ctx) => ctx.faker.date.recent().toISOString().slice(11, 16),
@@ -73,14 +168,34 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
     const week = Math.ceil(((d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7);
     return `${d.getFullYear()}-W${String(week).padStart(2, `0`)}`;
   },
+
   mac: (ctx) => ctx.faker.internet.mac(),
-  nanoid: (ctx) => ctx.faker.string.nanoid(),
+
+  nanoid: (ctx) => ctx.faker.string.nanoid({ min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) }),
+
   octal: (ctx) =>
     ctx.faker.string.octal({
       prefix: ``,
       length: { min: Math.max(1, ctx.bounds.min), max: Math.max(1, ctx.bounds.max) }
     }),
+
   ulid: (ctx) => ctx.faker.string.ulid(),
-  url: (ctx) => ctx.faker.internet.url(),
+
+  url: (ctx) => {
+    // faker.internet.url() typically produces 15-50 char URLs. Retry to fit
+    // bounds; if no faker output works, synthesize a short valid URL.
+    const candidate = retryUntil(
+      () => ctx.faker.internet.url(),
+      (v) => withinBounds(v, ctx)
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Synthesize: `http://<host>/<path>` where minimum valid is `http://a.bc` = 11 chars.
+    const target = Math.max(11, Math.min(128, ctx.bounds.max));
+    const prefix = `http://a.bc`;
+    if (target <= prefix.length) return prefix;
+    const padding = ctx.faker.string.alpha({ length: target - prefix.length - 1, casing: `lower` });
+    return `${prefix}/${padding}`;
+  },
+
   uuid: (ctx) => ctx.faker.string.uuid()
 };
