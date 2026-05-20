@@ -1,5 +1,6 @@
-import type * as v from "valibot";
 import RandExp from "randexp";
+import { walkPipe } from "../utils/walkPipe.js";
+import { unhandledValidation } from "../utils/warnings.js";
 import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
 import { keyNameGenerators, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";
@@ -17,16 +18,9 @@ export interface GenerateExtras {
  * the Context. Unknown action types are recorded as warnings.
  */
 export const collectConstraints: Phase = (ctx) => {
-  const pipe = (`pipe` in ctx.schema ? ctx.schema.pipe : []) as readonly v.GenericPipeItem[];
-  for (const action of pipe) {
-    if (action.kind === `schema`) continue; // the first pipe entry is the string schema itself
-    const handler = actionHandlers[action.type];
-    if (handler) {
-      handler(ctx, action);
-    } else if (action.kind === `validation` && !knownActionTypes.has(action.type)) {
-      ctx.warnings.push(`Unhandled string validation: ${action.type}`);
-    }
-  }
+  walkPipe(ctx.schema, ctx, actionHandlers, (type) => {
+    if (!knownActionTypes.has(type)) ctx.warnings.push(unhandledValidation(`string`, type));
+  });
   return undefined;
 };
 

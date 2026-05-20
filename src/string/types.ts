@@ -52,7 +52,7 @@ export interface StringContext {
  * Handler invoked by the `collectConstraints` phase for a single pipe item.
  * Pure: mutates only the provided Context.
  */
-export type ActionHandler = (ctx: StringContext, action: v.GenericPipeItem) => void;
+export type ActionHandler = (ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync) => void;
 
 /**
  * A phase is a single ordered pass over the Context. Returns the (possibly produced) value

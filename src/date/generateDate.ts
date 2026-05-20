@@ -1,13 +1,13 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
+import { readDate } from "../utils/readRequirement.js";
+import { walkPipe } from "../utils/walkPipe.js";
+import { unhandledValidation } from "../utils/warnings.js";
 import type { SchemaMaybeWithPipe } from "../types.js";
 
 /**
- * Generate a mock Date for a Valibot date schema. Date pipelines are simple
- * compared to string/number — `value`, `min_value`, `max_value` exhaust the
- * useful action surface, so we inline the registry and orchestrator together.
- *
- * Adding a new date action means adding one branch to `collect`.
+ * Generate a mock Date for a Valibot date schema. Handles `value`,
+ * `min_value`, `max_value`.
  */
 export interface GenerateDateOptions {
   faker: Faker;
@@ -20,36 +20,27 @@ interface DateContext {
   exactValue: Date | undefined;
   min: Date | undefined;
   max: Date | undefined;
-  warnings: string[];
 }
 
-const KNOWN_ACTIONS = new Set([`value`, `min_value`, `max_value`]);
+const handlers = {
+  value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const d = readDate(action);
+    if (d) ctx.exactValue = d;
+  },
+  min_value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const d = readDate(action);
+    if (d) ctx.min = d;
+  },
+  max_value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const d = readDate(action);
+    if (d) ctx.max = d;
+  }
+};
 
 export const generateDate = (schema: DateSchemaInput, options: GenerateDateOptions): Date => {
-  const ctx: DateContext = { exactValue: undefined, min: undefined, max: undefined, warnings: [] };
-  const pipe = (`pipe` in schema ? schema.pipe : []) as readonly v.GenericPipeItem[];
+  const ctx: DateContext = { exactValue: undefined, min: undefined, max: undefined };
+  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`date`, type)));
 
-  for (const action of pipe) {
-    if (action.kind === `schema`) continue;
-    const req = (action as { requirement?: unknown }).requirement;
-    switch (action.type) {
-      case `value`:
-        if (req instanceof Date) ctx.exactValue = req;
-        break;
-      case `min_value`:
-        if (req instanceof Date) ctx.min = req;
-        break;
-      case `max_value`:
-        if (req instanceof Date) ctx.max = req;
-        break;
-      default:
-        if (action.kind === `validation` && !KNOWN_ACTIONS.has(action.type)) {
-          ctx.warnings.push(`Unhandled date validation: ${action.type}`);
-        }
-    }
-  }
-
-  if (options.onWarn) for (const w of ctx.warnings) options.onWarn(w);
   if (ctx.exactValue) return ctx.exactValue;
   if (ctx.min && ctx.max) return options.faker.date.between({ from: ctx.min, to: ctx.max });
   if (ctx.min) return options.faker.date.soon({ refDate: ctx.min });

@@ -1,4 +1,5 @@
 import type * as v from "valibot";
+import { readArray, readNumber, readRequirement, readString } from "../utils/readRequirement.js";
 import type { ActionHandler, StringContext } from "./types.js";
 
 /**
@@ -32,25 +33,25 @@ export const actionHandlers: Record<string, ActionHandler> = {
   // Word counts use Intl.Segmenter in Valibot; for our lorem output a simple
   // space-separated token count is equivalent.
   words: (ctx, action) => {
-    const n = readNumberRequirement(action);
+    const n = readNumber(action);
     if (n === undefined) return;
     ctx.wordBounds = { min: n, max: n };
     ctx.wordCountSet = true;
   },
   min_words: (ctx, action) => {
-    const n = readNumberRequirement(action);
+    const n = readNumber(action);
     if (n === undefined) return;
     ctx.wordBounds = { min: Math.max(ctx.wordBounds.min, n), max: Math.max(ctx.wordBounds.max, n) };
     ctx.wordCountSet = true;
   },
   max_words: (ctx, action) => {
-    const n = readNumberRequirement(action);
+    const n = readNumber(action);
     if (n === undefined) return;
     ctx.wordBounds = { min: Math.min(ctx.wordBounds.min, n), max: Math.min(ctx.wordBounds.max, n) };
     ctx.wordCountSet = true;
   },
   not_words: (ctx, action) => {
-    const n = readNumberRequirement(action);
+    const n = readNumber(action);
     if (n !== undefined) ctx.forbiddenWordCounts.add(n);
   },
   non_empty: (ctx) => {
@@ -62,55 +63,48 @@ export const actionHandlers: Record<string, ActionHandler> = {
 
   // ── Exact-value constraints ───────────────────────────────────────────
   value: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
-    if (typeof req === `string`) ctx.exactValue = req;
+    const req = readString(action);
+    if (req !== undefined) ctx.exactValue = req;
   },
   values: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
-    if (Array.isArray(req)) {
-      const allowed = req.filter((v): v is string => typeof v === `string`);
-      if (allowed.length > 0) ctx.allowedValues = allowed;
-    }
+    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    if (allowed) ctx.allowedValues = allowed;
   },
   not_value: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
-    if (typeof req === `string`) ctx.forbiddenValues.add(req);
+    const req = readString(action);
+    if (req !== undefined) ctx.forbiddenValues.add(req);
   },
   not_values: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
-    if (Array.isArray(req)) {
-      for (const v of req) if (typeof v === `string`) ctx.forbiddenValues.add(v);
-    }
+    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    if (allowed) for (const v of allowed) ctx.forbiddenValues.add(v);
   },
 
   // ── Pattern constraints ───────────────────────────────────────────────
   regex: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
+    const req = readRequirement(action);
     if (req instanceof RegExp) ctx.regex = req;
   },
   includes: (ctx, action) => {
-    const req = readStringRequirement(action);
+    const req = readString(action);
     if (req !== undefined) ctx.includes = [...ctx.includes, req];
   },
   starts_with: (ctx, action) => {
-    const req = readStringRequirement(action);
+    const req = readString(action);
     if (req !== undefined) ctx.startsWith = req;
   },
   ends_with: (ctx, action) => {
-    const req = readStringRequirement(action);
+    const req = readString(action);
     if (req !== undefined) ctx.endsWith = req;
   },
   excludes: (ctx, action) => {
-    const req = readStringRequirement(action);
+    const req = readString(action);
     if (req !== undefined) ctx.excludes = [...ctx.excludes, req];
   },
 
   // ── Metadata ──────────────────────────────────────────────────────────
   examples: (ctx, action) => {
-    const req = (action as { requirement?: unknown }).requirement;
-    if (Array.isArray(req) && req.every((v): v is string => typeof v === `string`)) {
-      ctx.examples = req;
-    }
+    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    if (allowed) ctx.examples = allowed;
   },
 
   // ── Format selectors ──────────────────────────────────────────────────
@@ -163,37 +157,27 @@ function setFormat(name: string): ActionHandler {
   };
 }
 
-function readNumberRequirement(action: v.GenericPipeItem): number | undefined {
-  const req = (action as { requirement?: unknown }).requirement;
-  return typeof req === `number` && Number.isFinite(req) ? req : undefined;
-}
-
-function readStringRequirement(action: v.GenericPipeItem): string | undefined {
-  const req = (action as { requirement?: unknown }).requirement;
-  return typeof req === `string` ? req : undefined;
-}
-
-function setLengthExact(ctx: StringContext, action: v.GenericPipeItem): void {
-  const len = readNumberRequirement(action);
+function setLengthExact(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+  const len = readNumber(action);
   if (len === undefined) return;
   ctx.bounds = { min: len, max: len };
 }
 
-function setLengthMin(ctx: StringContext, action: v.GenericPipeItem): void {
-  const min = readNumberRequirement(action);
+function setLengthMin(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+  const min = readNumber(action);
   if (min === undefined) return;
   ctx.bounds = { min: Math.max(ctx.bounds.min, min), max: ctx.bounds.max };
   if (ctx.bounds.max < ctx.bounds.min) ctx.bounds.max = ctx.bounds.min;
 }
 
-function setLengthMax(ctx: StringContext, action: v.GenericPipeItem): void {
-  const max = readNumberRequirement(action);
+function setLengthMax(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+  const max = readNumber(action);
   if (max === undefined) return;
   ctx.bounds = { min: ctx.bounds.min, max: Math.min(ctx.bounds.max, max) };
   if (ctx.bounds.min > ctx.bounds.max) ctx.bounds.min = ctx.bounds.max;
 }
 
-function addForbiddenLength(ctx: StringContext, action: v.GenericPipeItem): void {
-  const len = readNumberRequirement(action);
+function addForbiddenLength(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+  const len = readNumber(action);
   if (len !== undefined) ctx.forbiddenLengths.add(len);
 }

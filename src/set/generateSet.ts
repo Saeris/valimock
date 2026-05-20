@@ -1,19 +1,20 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import type { SchemaMaybeWithPipe, Schema, SyncSchema } from "../types.js";
+import { makeBounds, pickAvoiding, reconcileBounds, tightenMax, tightenMin, type Bounds } from "../utils/bounds.js";
+import { readNumber } from "../utils/readRequirement.js";
+import { walkPipe } from "../utils/walkPipe.js";
+import { unhandledValidation } from "../utils/warnings.js";
+import type { Schema, SchemaMaybeWithPipe, SyncSchema } from "../types.js";
 
 /**
  * Generate a mock Set for a Valibot set schema. Element generation is
- * recursive — `mockItem` is a callback into Valimock's primary `#mock`
- * dispatcher so element schemas respect the full pipeline.
- *
- * Supported actions: `size`, `min_size`, `max_size`, `not_size`. The
- * registry/orchestrator share one file given the small action surface.
+ * recursive via `mockItem`. Honors `size` / `min_size` / `max_size` /
+ * `not_size`. The result may be smaller than the target when the element
+ * schema produces too few distinct values within the retry budget.
  */
 export interface GenerateSetOptions {
   faker: Faker;
   onWarn?: (message: string) => void;
-  /** Element generator — typically a bound reference to Valimock's `#mock`. */
   mockItem: (itemSchema: v.GenericSchema | v.GenericSchemaAsync) => unknown;
 }
 
@@ -23,73 +24,44 @@ export type SetSchemaInput = SchemaMaybeWithPipe<
 >;
 
 interface SetContext {
+  bounds: Bounds;
   exactSize: number | undefined;
-  min: number;
-  max: number;
-  minSet: boolean;
-  maxSet: boolean;
   forbiddenSizes: Set<number>;
-  warnings: string[];
 }
 
-const DEFAULT_MIN = 1;
-const DEFAULT_MAX = 5;
-const KNOWN_ACTIONS = new Set([`size`, `min_size`, `max_size`, `not_size`]);
-/** Cap on attempts to grow the result Set when duplicate elements collide. */
+const DEFAULTS = { min: 1, max: 5 };
 const ADD_RETRY_BUDGET = 256;
+
+const handlers = {
+  size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const n = readNumber(action);
+    if (n !== undefined) ctx.exactSize = n;
+  },
+  min_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const n = readNumber(action);
+    if (n !== undefined) tightenMin(ctx.bounds, n);
+  },
+  max_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const n = readNumber(action);
+    if (n !== undefined) tightenMax(ctx.bounds, n);
+  },
+  not_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+    const n = readNumber(action);
+    if (n !== undefined) ctx.forbiddenSizes.add(n);
+  }
+};
 
 export const generateSet = (schema: SetSchemaInput, options: GenerateSetOptions): Set<unknown> => {
   const ctx: SetContext = {
+    bounds: makeBounds(DEFAULTS),
     exactSize: undefined,
-    min: DEFAULT_MIN,
-    max: DEFAULT_MAX,
-    minSet: false,
-    maxSet: false,
-    forbiddenSizes: new Set(),
-    warnings: []
+    forbiddenSizes: new Set()
   };
-  const pipe = (`pipe` in schema ? schema.pipe : []) as readonly v.GenericPipeItem[];
 
-  for (const action of pipe) {
-    if (action.kind === `schema`) continue;
-    const req = (action as { requirement?: unknown }).requirement;
-    switch (action.type) {
-      case `size`:
-        if (typeof req === `number`) ctx.exactSize = req;
-        break;
-      case `min_size`:
-        if (typeof req === `number`) {
-          ctx.min = ctx.minSet ? Math.max(ctx.min, req) : req;
-          ctx.minSet = true;
-        }
-        break;
-      case `max_size`:
-        if (typeof req === `number`) {
-          ctx.max = ctx.maxSet ? Math.min(ctx.max, req) : req;
-          ctx.maxSet = true;
-        }
-        break;
-      case `not_size`:
-        if (typeof req === `number`) ctx.forbiddenSizes.add(req);
-        break;
-      default:
-        if (action.kind === `validation` && !KNOWN_ACTIONS.has(action.type)) {
-          ctx.warnings.push(`Unhandled set validation: ${action.type}`);
-        }
-    }
-  }
+  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`set`, type)));
+  reconcileBounds(ctx.bounds);
 
-  if (options.onWarn) for (const w of ctx.warnings) options.onWarn(w);
-
-  // Reconcile bounds (same logic as array).
-  if (ctx.minSet && !ctx.maxSet && ctx.min > ctx.max) ctx.max = ctx.min;
-  if (ctx.maxSet && !ctx.minSet && ctx.max < ctx.min) ctx.min = ctx.max;
-
-  let targetSize =
-    ctx.exactSize !== undefined ? ctx.exactSize : options.faker.number.int({ min: ctx.min, max: ctx.max });
-  // Nudge away from a forbidden size, staying within bounds when possible.
-  while (ctx.forbiddenSizes.has(targetSize) && targetSize + 1 <= ctx.max) targetSize += 1;
-  while (ctx.forbiddenSizes.has(targetSize) && targetSize - 1 >= ctx.min) targetSize -= 1;
+  const targetSize = pickAvoiding(ctx.bounds, ctx.forbiddenSizes, ctx.exactSize ?? options.faker);
 
   const result = new Set<unknown>();
   let attempts = 0;
