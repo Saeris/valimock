@@ -1,18 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  boolean,
-  nan,
-  nonNullable,
-  nonNullish,
-  nonOptional,
-  null_,
-  nullable,
-  nullish,
-  number,
-  optional,
-  parse,
-  string
-} from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mock = new Valimock({ onWarn: () => {} }).mock;
@@ -25,68 +12,68 @@ const mock = new Valimock({ onWarn: () => {} }).mock;
 
 describe(`mockBoolean`, () => {
   it(`returns a boolean and round-trips`, () => {
-    const schema = boolean();
+    const schema = v.boolean();
     for (let i = 0; i < 30; i++) {
       const result = mock(schema);
       expect(typeof result).toBe(`boolean`);
-      expect(parse(schema, result)).toBe(result);
+      expect(v.parse(schema, result)).toBe(result);
     }
   });
 });
 
 describe(`mockNaN`, () => {
   it(`always returns NaN and round-trips`, () => {
-    const schema = nan();
+    const schema = v.nan();
     for (let i = 0; i < 10; i++) {
       const result = mock(schema);
       expect(Number.isNaN(result)).toBe(true);
       // Valibot parse uses Object.is for NaN comparison, so the round-trip is
       // trivially satisfied (parse returns the same NaN).
-      expect(Number.isNaN(parse(schema, result))).toBe(true);
+      expect(Number.isNaN(v.parse(schema, result))).toBe(true);
     }
   });
 });
 
 describe(`mockNull`, () => {
   it(`always returns null and round-trips`, () => {
-    const schema = null_();
+    const schema = v.null_();
     for (let i = 0; i < 10; i++) {
       const result = mock(schema);
       expect(result).toBeNull();
-      expect(parse(schema, result)).toBeNull();
+      expect(v.parse(schema, result)).toBeNull();
     }
   });
 });
 
 describe(`mockRequired family (non_nullable / non_nullish / non_optional)`, () => {
   it(`non_nullable: wraps a nullable, produces a non-null value`, () => {
-    const schema = nonNullable(nullable(string()));
+    const schema = v.nonNullable(v.nullable(v.string()));
     for (let i = 0; i < 30; i++) {
       const result = mock(schema);
       expect(result).not.toBeNull();
       expect(typeof result).toBe(`string`);
-      expect(parse(schema, result)).toBe(result);
+      expect(v.parse(schema, result)).toBe(result);
     }
   });
 
   it(`non_nullish: wraps a nullish, produces neither null nor undefined`, () => {
-    const schema = nonNullish(nullish(number()));
+    const schema = v.nonNullish(v.nullish(v.number()));
     for (let i = 0; i < 30; i++) {
       const result = mock(schema);
       expect(result).not.toBeNull();
       expect(result).not.toBeUndefined();
       expect(typeof result).toBe(`number`);
-      expect(parse(schema, result)).toBe(result);
+      expect(v.parse(schema, result)).toBe(result);
     }
   });
 
   it(`non_optional: wraps an optional, never returns undefined`, () => {
-    const schema = nonOptional(optional(string()));
+    const schema = v.nonOptional(v.optional(v.string()));
     for (let i = 0; i < 30; i++) {
       const result = mock(schema);
       expect(result).not.toBeUndefined();
       expect(typeof result).toBe(`string`);
-      expect(parse(schema, result)).toBe(result);
+      expect(v.parse(schema, result)).toBe(result);
     }
   });
 });

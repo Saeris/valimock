@@ -1,7 +1,6 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
-import { boolean, intersect, number, object, parse, string } from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mock = new Valimock({ onWarn: () => {} }).mock;
@@ -41,12 +40,12 @@ const intersectSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
         for (const { key, valueShape } of entries) {
           if (usedKeys.has(key)) continue;
           usedKeys.add(key);
-          shape[key] = valueShape === `string` ? string() : valueShape === `number` ? number() : boolean();
+          shape[key] = valueShape === `string` ? v.string() : valueShape === `number` ? v.number() : v.boolean();
         }
-        return object(shape);
+        return v.object(shape);
       })
       .filter((opt) => Object.keys(opt.entries).length > 0);
-    return intersect(options as never) as unknown as v.GenericSchema<unknown>;
+    return v.intersect(options as never) as unknown as v.GenericSchema<unknown>;
   })
   .filter((schema) => {
     // After the disjoint-keys filter some options may have collapsed to
@@ -60,7 +59,7 @@ describe(`mockIntersect property-based`, () => {
     fc.assert(
       fc.property(intersectSchemaArb, (schema) => {
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 200 }
     );

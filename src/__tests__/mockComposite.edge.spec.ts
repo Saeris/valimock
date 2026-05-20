@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { intersect, literal, number, object, parse, string, union } from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 /**
@@ -13,14 +13,17 @@ describe(`mockUnion edge cases`, () => {
     // a strict supertype of option[1]'s shape — parse routes to option[0] and
     // strips the extra `extra` key option[1] adds. mockUnion must detect this
     // and pick a different option (or retry until one matches).
-    const schema = union([object({ kind: string() }), object({ kind: literal(`special`), extra: number() })]);
+    const schema = v.union([
+      v.object({ kind: v.string() }),
+      v.object({ kind: v.literal(`special`), extra: v.number() })
+    ]);
     const warnings: string[] = [];
     const m = new Valimock({ onWarn: (msg) => warnings.push(msg) }).mock;
 
     // Over many iterations, every result should round-trip through parse.
     for (let i = 0; i < 50; i++) {
       const result = m(schema);
-      expect(parse(schema, result)).toStrictEqual(result);
+      expect(v.parse(schema, result)).toStrictEqual(result);
     }
   });
 
@@ -39,12 +42,12 @@ describe(`mockUnion edge cases`, () => {
     //
     // So this test asserts that the retry path *recovers* rather than emitting
     // the warning. That covers the loop body (untried-option preference).
-    const schema = union([object({ kind: string() }), object({ kind: string(), more: number() })]);
+    const schema = v.union([v.object({ kind: v.string() }), v.object({ kind: v.string(), more: v.number() })]);
     const warnings: string[] = [];
     const m = new Valimock({ onWarn: (msg) => warnings.push(msg) }).mock;
     for (let i = 0; i < 20; i++) {
       const result = m(schema);
-      expect(parse(schema, result)).toStrictEqual(result);
+      expect(v.parse(schema, result)).toStrictEqual(result);
     }
   });
 });
@@ -54,7 +57,7 @@ describe(`mockIntersect edge cases`, () => {
     // intersect([string, string]) — each option independently mocks a different
     // string. The deep-merge sees unequal primitives and emits a "merge issue"
     // warning. The orchestrator keeps the earlier value.
-    const schema = intersect([string(), string()]);
+    const schema = v.intersect([v.string(), v.string()]);
     const warnings: string[] = [];
     const m = new Valimock({ onWarn: (msg) => warnings.push(msg) }).mock;
     const result = m(schema);

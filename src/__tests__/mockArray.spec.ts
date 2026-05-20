@@ -1,50 +1,33 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  pipe,
-  pipeAsync,
-  parse,
-  parseAsync,
-  array,
-  string,
-  length,
-  empty,
-  minLength,
-  maxLength,
-  number,
-  union,
-  url,
-  maxValue,
-  integer,
-  arrayAsync
-} from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock().mock;
 
 describe(`mockArray`, () => {
   it.concurrent.each([
-    array(string()),
-    array(number()),
-    array(union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])),
-    pipe(array(string()), empty()),
-    pipe(array(string()), minLength(2)),
-    pipe(array(string()), maxLength(10)),
-    pipe(array(string()), length(5))
+    v.array(v.string()),
+    v.array(v.number()),
+    v.array(v.union([v.pipe(v.string(), v.url()), v.pipe(v.number(), v.maxValue(20), v.integer())])),
+    v.pipe(v.array(v.string()), v.empty()),
+    v.pipe(v.array(v.string()), v.minLength(2)),
+    v.pipe(v.array(v.string()), v.maxLength(10)),
+    v.pipe(v.array(v.string()), v.length(5))
   ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
     const result = mockSchema(schema);
-    expect(parse(schema, result)).toStrictEqual(result);
+    expect(v.parse(schema, result)).toStrictEqual(result);
   });
 
   it.concurrent.each([
-    arrayAsync(string()),
-    arrayAsync(number()),
-    arrayAsync(union([pipe(string(), url()), pipe(number(), maxValue(20), integer())])),
-    pipeAsync(arrayAsync(string()), empty()),
-    pipeAsync(arrayAsync(string()), minLength(2)),
-    pipeAsync(arrayAsync(string()), maxLength(10)),
-    pipeAsync(arrayAsync(string()), length(5))
+    v.arrayAsync(v.string()),
+    v.arrayAsync(v.number()),
+    v.arrayAsync(v.union([v.pipe(v.string(), v.url()), v.pipe(v.number(), v.maxValue(20), v.integer())])),
+    v.pipeAsync(v.arrayAsync(v.string()), v.empty()),
+    v.pipeAsync(v.arrayAsync(v.string()), v.minLength(2)),
+    v.pipeAsync(v.arrayAsync(v.string()), v.maxLength(10)),
+    v.pipeAsync(v.arrayAsync(v.string()), v.length(5))
   ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
     const result = mockSchema(schema);
-    await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
   });
 });

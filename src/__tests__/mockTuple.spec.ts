@@ -1,36 +1,26 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  pipe,
-  pipeAsync,
-  parse,
-  parseAsync,
-  tuple,
-  tupleAsync,
-  string,
-  number,
-  url,
-  maxValue,
-  integer,
-  maxLength
-} from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock().mock;
 
 describe(`mockTuple`, () => {
   it.concurrent.each([
-    tuple([pipe(string(), url()), pipe(number(), maxValue(20), integer())]),
-    pipe(tuple([pipe(string(), url()), pipe(number(), maxValue(20), integer())]), maxLength(2))
+    v.tuple([v.pipe(v.string(), v.url()), v.pipe(v.number(), v.maxValue(20), v.integer())]),
+    v.pipe(v.tuple([v.pipe(v.string(), v.url()), v.pipe(v.number(), v.maxValue(20), v.integer())]), v.maxLength(2))
   ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
     const result = mockSchema(schema);
-    expect(parse(schema, result)).toStrictEqual(result);
+    expect(v.parse(schema, result)).toStrictEqual(result);
   });
 
   it.concurrent.each([
-    tupleAsync([pipe(string(), url()), pipeAsync(number(), maxValue(20), integer())]),
-    pipeAsync(tupleAsync([pipe(string(), url()), pipeAsync(number(), maxValue(20), integer())]), maxLength(2))
+    v.tupleAsync([v.pipe(v.string(), v.url()), v.pipeAsync(v.number(), v.maxValue(20), v.integer())]),
+    v.pipeAsync(
+      v.tupleAsync([v.pipe(v.string(), v.url()), v.pipeAsync(v.number(), v.maxValue(20), v.integer())]),
+      v.maxLength(2)
+    )
   ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
     const result = mockSchema(schema);
-    await expect(parseAsync(schema, result)).resolves.toStrictEqual(result);
+    await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
   });
 });

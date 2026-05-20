@@ -1,7 +1,6 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
-import { boolean, literal, number, object, parse, string, variant } from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mock = new Valimock({ onWarn: () => {} }).mock;
@@ -32,10 +31,10 @@ const variantSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
   })
   .map((entries) => {
     const options = entries.map(({ tag, bodyShape }) => {
-      const body = bodyShape === `string` ? string() : bodyShape === `number` ? number() : boolean();
-      return object({ type: literal(tag), data: body });
+      const body = bodyShape === `string` ? v.string() : bodyShape === `number` ? v.number() : v.boolean();
+      return v.object({ type: v.literal(tag), data: body });
     });
-    return variant(`type`, options as never) as unknown as v.GenericSchema<unknown>;
+    return v.variant(`type`, options as never) as unknown as v.GenericSchema<unknown>;
   });
 
 describe(`mockVariant property-based`, () => {
@@ -43,7 +42,7 @@ describe(`mockVariant property-based`, () => {
     fc.assert(
       fc.property(variantSchemaArb, (schema) => {
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 200 }
     );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { enum_, parse } from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mock = new Valimock({ onWarn: () => {} }).mock;
@@ -31,14 +31,14 @@ enum MixedEnum {
 
 describe(`mockEnum`, () => {
   it.each([
-    [`string enum`, enum_(StringEnum), Object.values(StringEnum)],
-    [`numeric enum`, enum_(NumericEnum), [0, 1, 2]],
-    [`mixed enum`, enum_(MixedEnum), [`yes`, `no`, 42]]
+    [`string enum`, v.enum_(StringEnum), Object.values(StringEnum)],
+    [`numeric enum`, v.enum_(NumericEnum), [0, 1, 2]],
+    [`mixed enum`, v.enum_(MixedEnum), [`yes`, `no`, 42]]
   ])(`%s: every mock value is a valid enum member and round-trips`, (_label, schema, validValues) => {
     for (let i = 0; i < 50; i++) {
       const result = mock(schema);
       expect(validValues).toContain(result);
-      expect(parse(schema, result)).toBe(result);
+      expect(v.parse(schema, result)).toBe(result);
     }
   });
 });

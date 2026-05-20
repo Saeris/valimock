@@ -1,21 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  pipe,
-  parse,
-  string,
-  intersect,
-  object,
-  variant,
-  enum_,
-  literal,
-  nonEmpty,
-  number,
-  integer,
-  optional,
-  picklist,
-  exactOptional,
-  union
-} from "valibot";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock().mock;
@@ -27,85 +11,85 @@ enum PetType {
   FISH = `fish`
 }
 
-const petTypeSchema = enum_(PetType);
+const petTypeSchema = v.enum_(PetType);
 
-const petsSchema = intersect([
+const petsSchema = v.intersect([
   // common properties
-  object({
-    name: pipe(string(), nonEmpty()),
-    age: pipe(number(), integer())
+  v.object({
+    name: v.pipe(v.string(), v.nonEmpty()),
+    age: v.pipe(v.number(), v.integer())
   }),
   // type specific properties
-  variant(`type`, [
-    object({
-      type: literal(PetType.CAT),
-      sound: literal(`Meow`)
+  v.variant(`type`, [
+    v.object({
+      type: v.literal(PetType.CAT),
+      sound: v.literal(`Meow`)
     }),
-    object({
-      type: literal(PetType.DOG),
-      sound: literal(`Woof`)
+    v.object({
+      type: v.literal(PetType.DOG),
+      sound: v.literal(`Woof`)
     }),
-    object({
-      type: literal(PetType.BIRD),
-      sound: literal(`Tweet`)
+    v.object({
+      type: v.literal(PetType.BIRD),
+      sound: v.literal(`Tweet`)
     }),
-    object({
-      type: optional(petTypeSchema)
+    v.object({
+      type: v.optional(petTypeSchema)
     })
   ])
 ]);
 
-const vehiclesSchema = intersect([
-  object({
-    make: pipe(string(), nonEmpty()),
-    model: pipe(string(), nonEmpty())
+const vehiclesSchema = v.intersect([
+  v.object({
+    make: v.pipe(v.string(), v.nonEmpty()),
+    model: v.pipe(v.string(), v.nonEmpty())
   }),
-  union([
-    variant(`kind`, [
-      object({
-        kind: literal(`car`),
-        type: picklist([`sedan`, `truck`, `suv`]),
-        vin: pipe(string(), nonEmpty())
+  v.union([
+    v.variant(`kind`, [
+      v.object({
+        kind: v.literal(`car`),
+        type: v.picklist([`sedan`, `truck`, `suv`]),
+        vin: v.pipe(v.string(), v.nonEmpty())
       }),
-      object({
-        kind: literal(`motorcylce`),
-        vin: pipe(string(), nonEmpty())
+      v.object({
+        kind: v.literal(`motorcylce`),
+        vin: v.pipe(v.string(), v.nonEmpty())
       })
     ]),
-    object({
-      kind: exactOptional(picklist([`car`, `boat`, `motorcylce`, `airplane`]))
+    v.object({
+      kind: v.exactOptional(v.picklist([`car`, `boat`, `motorcylce`, `airplane`]))
     })
   ])
 ]);
 
-const nestedSchema = intersect([
-  object({
-    price: number(),
-    quantity: pipe(number(), integer())
+const nestedSchema = v.intersect([
+  v.object({
+    price: v.number(),
+    quantity: v.pipe(v.number(), v.integer())
   }),
-  variant(`kind`, [
-    variant(`type`, [
-      object({
-        kind: literal(`fruit`),
-        type: literal(`apple`),
-        color: literal(`green`)
+  v.variant(`kind`, [
+    v.variant(`type`, [
+      v.object({
+        kind: v.literal(`fruit`),
+        type: v.literal(`apple`),
+        color: v.literal(`green`)
       }),
-      object({
-        kind: literal(`fruit`),
-        type: literal(`banana`),
-        color: literal(`yellow`)
+      v.object({
+        kind: v.literal(`fruit`),
+        type: v.literal(`banana`),
+        color: v.literal(`yellow`)
       })
     ]),
-    variant(`type`, [
-      object({
-        kind: literal(`vegetable`),
-        type: literal(`carrot`),
-        color: literal(`orange`)
+    v.variant(`type`, [
+      v.object({
+        kind: v.literal(`vegetable`),
+        type: v.literal(`carrot`),
+        color: v.literal(`orange`)
       }),
-      object({
-        kind: literal(`vegetable`),
-        type: literal(`tomato`),
-        color: literal(`red`)
+      v.object({
+        kind: v.literal(`vegetable`),
+        type: v.literal(`tomato`),
+        color: v.literal(`red`)
       })
     ])
   ])
@@ -117,7 +101,7 @@ describe(`mockVariant`, () => {
     { repeats: 5 },
     (schema) => {
       const result = mockSchema(schema);
-      expect(parse(schema, result)).toStrictEqual(result);
+      expect(v.parse(schema, result)).toStrictEqual(result);
     }
   );
 });
