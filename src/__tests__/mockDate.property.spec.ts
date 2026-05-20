@@ -22,17 +22,17 @@ const dateSchemaArb: fc.Arbitrary<v.GenericSchema<Date>> = fc.oneof(
 
   // min only.
   fc
-    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1) })
+    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1), noInvalidDate: true })
     .map((d) => pipe(date(), minValue(d)) as unknown as v.GenericSchema<Date>),
 
   // max only.
   fc
-    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1) })
+    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1), noInvalidDate: true })
     .map((d) => pipe(date(), maxValue(d)) as unknown as v.GenericSchema<Date>),
 
   // Exact value pin.
   fc
-    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1) })
+    .date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1), noInvalidDate: true })
     .map((d) => pipe(date(), valueAction(d)) as unknown as v.GenericSchema<Date>)
 );
 

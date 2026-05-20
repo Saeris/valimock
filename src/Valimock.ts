@@ -6,9 +6,13 @@ import * as v from "valibot";
 import { generateArray } from "./array/generateArray.js";
 import { generateBigint } from "./bigint/generateBigint.js";
 import { generateDate } from "./date/generateDate.js";
+import { generateMap } from "./map/generateMap.js";
 import { generateNumber } from "./number/generateNumber.js";
+import { generateObject } from "./object/generateObject.js";
+import { generateRecord } from "./record/generateRecord.js";
 import { generateSet } from "./set/generateSet.js";
 import { generateString } from "./string/generateString.js";
+import { generateTuple } from "./tuple/generateTuple.js";
 import type { Schema, SchemaMaybeWithPipe, SyncSchema, MaybeRequiredSchema, RequiredSchema } from "./types.js";
 
 export class MockError extends Error {
@@ -212,13 +216,12 @@ export class Valimock {
     schema:
       | v.MapSchema<SyncSchema, SyncSchema, v.ErrorMessage<v.MapIssue> | undefined>
       | v.MapSchemaAsync<Schema, Schema, v.ErrorMessage<v.MapIssue> | undefined>
-  ): v.InferOutput<typeof schema> => {
-    const result = new Map<unknown, unknown>();
-    while (result.size < this.options.mapEntriesLength) {
-      result.set(this.#mock(schema.key), this.#mock(schema.value));
-    }
-    return result;
-  };
+  ): v.InferOutput<typeof schema> =>
+    generateMap(schema, {
+      entriesLength: this.options.mapEntriesLength,
+      mockItem: (item) => this.#mock(item),
+      onWarn: this.options.onWarn
+    }) as v.InferOutput<typeof schema>;
 
   #mockNaN = (schema: v.NanSchema<v.ErrorMessage<v.NanIssue> | undefined>): v.InferOutput<typeof schema> => NaN;
 
@@ -264,19 +267,9 @@ export class Valimock {
       | v.ObjectSchema<v.ObjectEntries, v.ErrorMessage<v.ObjectIssue> | undefined>
       | v.ObjectSchemaAsync<v.ObjectEntriesAsync, v.ErrorMessage<v.ObjectIssue> | undefined>
   ): v.InferOutput<typeof schema> =>
-    Object.entries(schema.entries).reduce<Record<string, v.GenericSchema>>((hash, [key, value]) => {
-      const result = this.#mock<Schema>(value, key);
-      // if a property is marked as exactOptional and it's mock value ended up
-      // being undefined, just exclude the property key entirely to simulate
-      // the expected behavior of that key being potentially missing
-      if (v.isOfType(`exact_optional`, value) && typeof result === `undefined`) {
-        return hash;
-      }
-      return {
-        ...hash,
-        [key]: result
-      };
-    }, {});
+    generateObject(schema, {
+      mockItem: (s, key) => this.#mock(s as Schema, key)
+    }) as v.InferOutput<typeof schema>;
 
   #mockOptional = (
     schema: v.OptionalSchema<SyncSchema, SyncSchema> | v.OptionalSchemaAsync<Schema, Schema>
@@ -299,9 +292,10 @@ export class Valimock {
       ? v.RecordSchema<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
       : v.RecordSchemaAsync<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
   ): v.InferOutput<typeof schema> =>
-    Object.fromEntries(
-      Array.from({ length: this.options.recordKeysLength }, () => [this.#mock(schema.key), this.#mock(schema.value)])
-    ) as v.InferOutput<typeof schema>;
+    generateRecord(schema, {
+      entriesLength: this.options.recordKeysLength,
+      mockItem: (item) => this.#mock(item)
+    }) as v.InferOutput<typeof schema>;
 
   #mockRecursive =
     (schema: v.LazySchema<v.GenericSchema> | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>) =>
@@ -347,7 +341,10 @@ export class Valimock {
     schema:
       | v.TupleSchema<v.TupleItems, v.ErrorMessage<v.TupleIssue> | undefined>
       | v.TupleSchemaAsync<v.TupleItemsAsync, v.ErrorMessage<v.TupleIssue> | undefined>
-  ): v.InferOutput<typeof schema> => schema.items.map((item) => this.#mock(item));
+  ): v.InferOutput<typeof schema> =>
+    generateTuple(schema, {
+      mockItem: (item) => this.#mock(item)
+    }) as v.InferOutput<typeof schema>;
 
   #mockUnion = (
     schema:
