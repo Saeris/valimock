@@ -249,10 +249,15 @@ export class Valimock {
 
   #mockNullish = (
     schema: v.NullishSchema<SyncSchema, SyncSchema> | v.NullishSchemaAsync<Schema, Schema>
-  ): v.InferOutput<typeof schema> =>
-    this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null, undefined]) ??
-    schema.default ??
-    this.options.faker.helpers.arrayElement([null, undefined]);
+  ): v.InferOutput<typeof schema> => {
+    if (schema.default !== undefined) {
+      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+    }
+    return (
+      this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null, undefined]) ??
+      this.options.faker.helpers.arrayElement([null, undefined])
+    );
+  };
 
   #mockNull = (schema: v.NullSchema<v.ErrorMessage<v.NullIssue> | undefined>): v.InferOutput<typeof schema> => null;
 
@@ -275,12 +280,19 @@ export class Valimock {
 
   #mockOptional = (
     schema: v.OptionalSchema<SyncSchema, SyncSchema> | v.OptionalSchemaAsync<Schema, Schema>
-  ): v.InferOutput<typeof schema> =>
-    schema.default ??
-    this.options.faker.helpers.arrayElement([
+  ): v.InferOutput<typeof schema> => {
+    // When the schema declares a default, honor it — `parse` will fill that
+    // value in when the key is absent, so emitting it here keeps parse(mock)
+    // structurally equal to mock(). `schema.default` may be a value or a
+    // function (per Valibot's `getDefault` helper).
+    if (schema.default !== undefined) {
+      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+    }
+    return this.options.faker.helpers.arrayElement([
       this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped),
       undefined
     ]);
+  };
 
   #mockRecord = <
     Key extends v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>> = v.BaseSchema<
@@ -299,10 +311,24 @@ export class Valimock {
       mockItem: (item) => this.#mock(item)
     }) as v.InferOutput<typeof schema>;
 
-  #mockRecursive =
-    (schema: v.LazySchema<v.GenericSchema> | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>) =>
-    async (input: v.InferInput<typeof schema>): Promise<v.InferOutput<typeof schema>> =>
-      this.#mock(await schema.getter(input));
+  /**
+   * `lazy` schema: getter returns the actual schema. We pass `undefined` since
+   * we have no input value during mocking. Only the sync `LazySchema` variant
+   * is fully supported here — `LazySchemaAsync.getter` may return a Promise,
+   * in which case we can't mock synchronously and emit a warning.
+   */
+  #mockLazy = (
+    schema: v.LazySchema<v.GenericSchema> | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
+  ): v.InferOutput<typeof schema> => {
+    const inner = schema.getter(undefined);
+    if (inner instanceof Promise) {
+      this.options.onWarn(
+        `lazy: async getter returned a Promise; synchronous mock() cannot resolve it. Use parseAsync at call sites that need this schema.`
+      );
+      return undefined as v.InferOutput<typeof schema>;
+    }
+    return this.#mock(inner as Schema);
+  };
 
   #mockSet = <
     TSchema extends
@@ -373,35 +399,134 @@ export class Valimock {
       pickOption: (opts) => this.options.faker.helpers.arrayElement(opts)
     }) as v.InferOutput<typeof schema>;
 
+  // ── Type-only schemas (no constraint surface beyond "is this type") ────
+
+  #mockAny = (_schema: v.AnySchema): unknown =>
+    this.options.faker.helpers.arrayElement([
+      this.options.faker.lorem.word(),
+      this.options.faker.number.int(),
+      true,
+      null
+    ]);
+
+  #mockUnknown = (_schema: v.UnknownSchema): unknown => this.#mockAny(_schema as unknown as v.AnySchema);
+
+  #mockVoid = (_schema: v.VoidSchema<v.ErrorMessage<v.VoidIssue> | undefined>): undefined => undefined;
+
+  /**
+   * `never` is unsatisfiable by design — no value passes parse. Throw a
+   * MockError so callers can detect schemas that are definitionally
+   * un-mockable rather than silently emitting `undefined`.
+   */
+  #mockNever = (_schema: v.NeverSchema<v.ErrorMessage<v.NeverIssue> | undefined>): never => {
+    throw new MockError(`never`);
+  };
+
+  #mockFunction =
+    (_schema: v.FunctionSchema<v.ErrorMessage<v.FunctionIssue> | undefined>): ((...args: unknown[]) => unknown) =>
+    (..._args: unknown[]): unknown =>
+      undefined;
+
+  #mockSymbol = (_schema: v.SymbolSchema<v.ErrorMessage<v.SymbolIssue> | undefined>): symbol => Symbol();
+
+  #mockPromise = (_schema: v.PromiseSchema<v.ErrorMessage<v.PromiseIssue> | undefined>): Promise<unknown> =>
+    Promise.resolve(undefined);
+
+  #mockUndefinedable = (
+    schema: v.UndefinedableSchema<SyncSchema, SyncSchema> | v.UndefinedableSchemaAsync<Schema, Schema>
+  ): v.InferOutput<typeof schema> => {
+    if (schema.default !== undefined) {
+      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+    }
+    return this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), undefined]);
+  };
+
+  /**
+   * `instance` validates `input instanceof schema.class`. We can only produce a
+   * fitting mock when the class has a zero-arg constructor; otherwise we warn
+   * and return a best-effort `Object.create(prototype)` instance.
+   */
+  #mockInstance = (schema: v.InstanceSchema<v.Class, v.ErrorMessage<v.InstanceIssue> | undefined>): unknown => {
+    try {
+      return new (schema.class as new () => unknown)();
+    } catch (err) {
+      this.options.onWarn(
+        `instance(${schema.class.name}): class requires constructor arguments; returning a prototype-based placeholder. (${String(err)})`
+      );
+      return Object.create((schema.class as { prototype: object }).prototype);
+    }
+  };
+
+  /**
+   * `blob` schema. Requires the `Blob` global (Node ≥18, all modern browsers,
+   * and jsdom). When unavailable, warn and return an empty object so downstream
+   * consumers don't crash on property access.
+   */
+  #mockBlob = (_schema: v.BlobSchema<v.ErrorMessage<v.BlobIssue> | undefined>): unknown => {
+    if (typeof Blob === `undefined`) {
+      this.options.onWarn(`blob: no Blob global available in this environment`);
+      return {};
+    }
+    return new Blob([]);
+  };
+
+  /**
+   * `file` schema. Requires the `File` global (browsers, jsdom, Node ≥20).
+   * When unavailable, warn and return an empty object.
+   */
+  #mockFile = (_schema: v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>): unknown => {
+    if (typeof File === `undefined`) {
+      this.options.onWarn(`file: no File global available in this environment`);
+      return {};
+    }
+    return new File([], `mock.bin`);
+  };
+
   #schemas: Record<string, (schema: never) => unknown> = {
+    any: this.#mockAny,
     array: this.#mockArray,
     bigint: this.#mockBigint,
+    blob: this.#mockBlob,
     boolean: this.#mockBoolean,
     date: this.#mockDate,
     enum: this.#mockEnum,
-    exactOptional: this.#mockOptional,
+    exact_optional: this.#mockOptional,
+    file: this.#mockFile,
+    function: this.#mockFunction,
+    instance: this.#mockInstance,
     intersect: this.#mockIntersect,
+    lazy: this.#mockLazy,
     literal: this.#mockLiteral,
+    loose_object: this.#mockObject,
+    loose_tuple: this.#mockTuple,
     map: this.#mockMap,
     nan: this.#mockNaN,
+    never: this.#mockNever,
     non_nullable: this.#mockRequired,
     non_nullish: this.#mockRequired,
     non_optional: this.#mockRequired,
+    null: this.#mockNull,
     nullable: this.#mockNullable,
     nullish: this.#mockNullish,
-    null: this.#mockNull,
     number: this.#mockNumber,
     object: this.#mockObject,
+    object_with_rest: this.#mockObject,
     optional: this.#mockOptional,
     picklist: this.#mockPicklist,
+    promise: this.#mockPromise,
     record: this.#mockRecord,
-    required: this.#mockRequired,
-    recursive: this.#mockRecursive,
     set: this.#mockSet,
+    strict_object: this.#mockObject,
+    strict_tuple: this.#mockTuple,
     string: this.#mockString,
+    symbol: this.#mockSymbol,
     tuple: this.#mockTuple,
-    union: this.#mockUnion,
+    tuple_with_rest: this.#mockTuple,
     undefined: this.#mockUndefined,
-    variant: this.#mockVariant
+    undefinedable: this.#mockUndefinedable,
+    union: this.#mockUnion,
+    unknown: this.#mockUnknown,
+    variant: this.#mockVariant,
+    void: this.#mockVoid
   };
 }

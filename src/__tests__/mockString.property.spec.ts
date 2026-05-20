@@ -65,9 +65,10 @@ const formats = {
   decimal: { minLen: 3, maxLen: 32, build: () => decimal() },
   digits: { minLen: 1, maxLen: 64, build: () => digits() },
   email: { minLen: 15, maxLen: 64, build: () => email() },
-  // faker.internet.emoji() always returns exactly one grapheme — but encoded
-  // length in code units varies. Most are 1-2 UTF-16 code units (.length).
-  emoji: { minLen: 1, maxLen: 2, build: () => emoji() },
+  // faker.internet.emoji() always returns exactly one grapheme. Most modern
+  // emojis are 2 UTF-16 code units (surrogate pair) — though Valibot's regex
+  // also accepts 1-code-unit chars like `©`, faker doesn't reliably hit them.
+  emoji: { minLen: 2, maxLen: 2, build: () => emoji() },
   hex_color: { minLen: 7, maxLen: 7, build: () => hexColor() },
   hexadecimal: { minLen: 1, maxLen: 64, build: () => hexadecimal() },
   // IMEI has exactly two valid lengths: 15 (digits-only) or 18 (dashed groups).
@@ -131,6 +132,8 @@ const stringSchemaArb = fc
     // IMEI uniquely has only two valid lengths (15 and 18); reject any exact
     // length in between.
     if (formatKey === `imei` && bounds.kind === `exact` && bounds.len !== 15 && bounds.len !== 18) return false;
+    // BIC uniquely has only two valid lengths (8 BIC8 and 11 BIC11).
+    if (formatKey === `bic` && bounds.kind === `exact` && bounds.len !== 8 && bounds.len !== 11) return false;
     if (bounds.kind === `exact`) return bounds.len >= fmt.minLen && bounds.len <= fmt.maxLen;
     if (bounds.kind === `range`) return bounds.min <= fmt.maxLen && bounds.max >= fmt.minLen;
     if (bounds.kind === `max`) return bounds.max >= fmt.minLen;

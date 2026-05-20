@@ -77,19 +77,33 @@ Any schema type Valimock doesn't yet support can be handled by supplying a
 
 ### Schemas
 
-|      Any       |      Array      |    Bigint     |     Blob      |   Boolean   |    Date     |      Enum       |
-| :------------: | :-------------: | :-----------: | :-----------: | :---------: | :---------: | :-------------: |
-|       ❌       |        ✔        |       ✔       |      ➖       |      ✔      |      ✔      |        ✔        |
-|  **Instance**  |  **Intersect**  |  **Literal**  |    **Map**    |   **NaN**   |  **Never**  | **NonNullable** |
-|       ➖       |        ✔        |       ✔       |       ✔       |      ✔      |     ❌      |        ✔        |
-| **NonNullish** | **NonOptional** |   **Null**    | **Nullable**  | **Nullish** | **Number**  |   **Object**    |
-|       ✔        |        ✔        |       ✔       |       ✔       |      ✔      |      ✔      |        ✔        |
-|  **Optional**  |  **Picklist**   |  **Record**   | **Recursive** |   **Set**   | **Special** |   **String**    |
-|       ✔        |        ✔        |       ✔       |       ✔       |      ✔      |     ➖      |        ✔        |
-|   **Symbol**   |    **Tuple**    | **Undefined** |   **Union**   | **Unknown** | **Variant** |    **Void**     |
-|       ➖       |        ✔        |       ✔       |       ✔       |     ❌      |      ✔      |       ❌        |
+|        Any         |       Array       |     Bigint      |      Blob      |      Boolean      |    Custom     |       Date        |
+| :----------------: | :---------------: | :-------------: | :------------: | :---------------: | :-----------: | :---------------: |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |      ➖       |         ✔         |
+|      **Enum**      | **ExactOptional** |    **File**     |  **Function**  |   **Instance**    | **Intersect** |     **Lazy**      |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |       ✔       |         ✔         |
+|    **Literal**     |  **LooseObject**  | **LooseTuple**  |    **Map**     |      **NaN**      |   **Never**   |     **Null**      |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |       ✔       |         ✔         |
+|    **Nullable**    |    **Nullish**    | **NonNullable** | **NonNullish** |  **NonOptional**  |  **Number**   |    **Object**     |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |       ✔       |         ✔         |
+| **ObjectWithRest** |   **Optional**    |  **Picklist**   |  **Promise**   |    **Record**     |    **Set**    | **StrictObject**  |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |       ✔       |         ✔         |
+|  **StrictTuple**   |    **String**     |   **Symbol**    |   **Tuple**    | **TupleWithRest** | **Undefined** | **Undefinedable** |
+|         ✔          |         ✔         |        ✔        |       ✔        |         ✔         |       ✔       |         ✔         |
+|     **Union**      |    **Unknown**    |   **Variant**   |    **Void**    |                   |               |                   |
+|         ✔          |         ✔         |        ✔        |       ✔        |                   |               |                   |
 
-**Legend**: ✔ implemented · ⚠ partial · ❌ not implemented · ➖ unsupported / no meaningful mock representation
+**Legend**: ✔ implemented · ⚠ partial · ❌ not implemented · ➖ user-supplied via `customMocks`
+
+`custom` schemas run an arbitrary user predicate that Valimock has no general
+way to satisfy. Provide a matching `customMocks` entry keyed by the schema's
+`type` (`"custom"`, or a more specific tag if you wrap multiple `custom()`
+calls in a brand) to produce a value that will pass the predicate.
+
+For environment-dependent schemas (`blob`, `file`, `function`, `promise`,
+`instance`), Valimock returns a structural placeholder when the relevant
+global isn't available (e.g. `Blob` / `File` outside Node ≥18 / browsers /
+jsdom). The `onWarn` sink surfaces a notice in those cases.
 
 ### Validations
 

@@ -284,11 +284,37 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
   },
 
   // Slug: lowercase alphanumerics separated by `-` or `_`.
+  // Regex: ^[\da-z]+(?:[-_][\da-z]+)*$  — at least one chunk, optionally more
+  // chunks separated by single `-` or `_`. Honors `ctx.bounds` precisely when
+  // it can: aim for the lower bound (or middle of range) and produce exactly
+  // that many characters.
   slug: (ctx) => {
-    const wordCount = Math.max(1, Math.min(5, Math.floor(Math.max(1, ctx.bounds.max) / 4)));
-    return Array.from({ length: wordCount }, () =>
-      ctx.faker.string.alphanumeric({ length: ctx.faker.number.int({ min: 2, max: 6 }), casing: `lower` })
-    ).join(`-`);
+    const target =
+      ctx.bounds.min === ctx.bounds.max
+        ? ctx.bounds.min
+        : ctx.faker.number.int({ min: Math.max(1, ctx.bounds.min), max: Math.max(1, Math.min(64, ctx.bounds.max)) });
+    if (target <= 0) return ctx.faker.string.alphanumeric({ length: 1, casing: `lower` });
+    // Choose a word count that fits the target. Each separator is 1 char; each
+    // chunk is at least 1 char. So with N chunks we have N-1 separators and
+    // need target - (N-1) chars distributed across N chunks (each >= 1).
+    const maxChunks = Math.max(1, Math.min(6, Math.ceil(target / 3)));
+    const chunkCount = ctx.faker.number.int({ min: 1, max: maxChunks });
+    const charBudget = target - (chunkCount - 1); // separators
+    if (charBudget < chunkCount) {
+      // Pathological — bounds too tight for the chosen chunk count; fall back to one chunk.
+      return ctx.faker.string.alphanumeric({ length: target, casing: `lower` });
+    }
+    // Distribute charBudget across chunkCount chunks, each at least 1 char.
+    const chunks: string[] = [];
+    let remaining = charBudget;
+    for (let i = 0; i < chunkCount; i++) {
+      const slotsLeft = chunkCount - i;
+      const maxForThisChunk = remaining - (slotsLeft - 1);
+      const len = i === chunkCount - 1 ? remaining : ctx.faker.number.int({ min: 1, max: maxForThisChunk });
+      chunks.push(ctx.faker.string.alphanumeric({ length: len, casing: `lower` }));
+      remaining -= len;
+    }
+    return chunks.join(`-`);
   },
 
   // ISRC (Valibot v1.3): International Standard Recording Code.
