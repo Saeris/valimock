@@ -5,7 +5,9 @@ import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import * as v from "valibot";
 import { generateArray } from "./array/generateArray.js";
 import { generateBigint } from "./bigint/generateBigint.js";
+import { generateBlob } from "./blob/generateBlob.js";
 import { generateDate } from "./date/generateDate.js";
+import { generateFile } from "./file/generateFile.js";
 import { generateIntersect } from "./intersect/generateIntersect.js";
 import { generateMap } from "./map/generateMap.js";
 import { generateNumber } from "./number/generateNumber.js";
@@ -458,29 +460,19 @@ export class Valimock {
   };
 
   /**
-   * `blob` schema. Requires the `Blob` global (Node ≥18, all modern browsers,
-   * and jsdom). When unavailable, warn and return an empty object so downstream
-   * consumers don't crash on property access.
+   * `blob` schema with pipeline support. Honors size / min_size / max_size /
+   * not_size / mime_type. Returns a placeholder when the `Blob` global is
+   * unavailable (Node < 18 without polyfills).
    */
-  #mockBlob = (_schema: v.BlobSchema<v.ErrorMessage<v.BlobIssue> | undefined>): unknown => {
-    if (typeof Blob === `undefined`) {
-      this.options.onWarn(`blob: no Blob global available in this environment`);
-      return {};
-    }
-    return new Blob([]);
-  };
+  #mockBlob = (schema: SchemaMaybeWithPipe<v.BlobSchema<v.ErrorMessage<v.BlobIssue> | undefined>>): unknown =>
+    generateBlob(schema, { onWarn: this.options.onWarn });
 
   /**
-   * `file` schema. Requires the `File` global (browsers, jsdom, Node ≥20).
-   * When unavailable, warn and return an empty object.
+   * `file` schema with pipeline support. Same action set as `blob` since File
+   * extends Blob. Returns a placeholder when the `File` global is unavailable.
    */
-  #mockFile = (_schema: v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>): unknown => {
-    if (typeof File === `undefined`) {
-      this.options.onWarn(`file: no File global available in this environment`);
-      return {};
-    }
-    return new File([], `mock.bin`);
-  };
+  #mockFile = (schema: SchemaMaybeWithPipe<v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>>): unknown =>
+    generateFile(schema, { onWarn: this.options.onWarn });
 
   #schemas: Record<string, (schema: never) => unknown> = {
     any: this.#mockAny,
