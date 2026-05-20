@@ -386,7 +386,8 @@ export class Valimock {
   ): v.InferOutput<typeof schema> =>
     generateUnion(schema, {
       mockItem: (item) => this.#mock(item),
-      pickOption: (opts) => this.options.faker.helpers.arrayElement(opts)
+      pickOption: (opts) => this.options.faker.helpers.arrayElement(opts),
+      onWarn: this.options.onWarn
     }) as v.InferOutput<typeof schema>;
 
   #mockUndefined = (
