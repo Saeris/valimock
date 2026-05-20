@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { generateArray } from "./array/generateArray.js";
 import { generateBigint } from "./bigint/generateBigint.js";
 import { generateDate } from "./date/generateDate.js";
+import { generateIntersect } from "./intersect/generateIntersect.js";
 import { generateMap } from "./map/generateMap.js";
 import { generateNumber } from "./number/generateNumber.js";
 import { generateObject } from "./object/generateObject.js";
@@ -13,6 +14,8 @@ import { generateRecord } from "./record/generateRecord.js";
 import { generateSet } from "./set/generateSet.js";
 import { generateString } from "./string/generateString.js";
 import { generateTuple } from "./tuple/generateTuple.js";
+import { generateUnion } from "./union/generateUnion.js";
+import { generateVariant } from "./variant/generateVariant.js";
 import type { Schema, SchemaMaybeWithPipe, SyncSchema, MaybeRequiredSchema, RequiredSchema } from "./types.js";
 
 export class MockError extends Error {
@@ -202,11 +205,10 @@ export class Valimock {
   #mockIntersect = (
     schema: v.IntersectSchema<v.IntersectOptions, v.ErrorMessage<v.IntersectIssue> | undefined>
   ): v.InferOutput<typeof schema> =>
-    schema.options.reduce(
-      (hash, entry) => Object.assign(hash, this.#mock(entry)),
-      // @ts-expect-error
-      {}
-    ) as v.InferOutput<typeof schema>;
+    generateIntersect(schema, {
+      mockItem: (item) => this.#mock(item),
+      onWarn: this.options.onWarn
+    }) as v.InferOutput<typeof schema>;
 
   #mockLiteral = (
     schema: v.LiteralSchema<v.Literal, v.ErrorMessage<v.LiteralIssue> | undefined>
@@ -353,7 +355,11 @@ export class Valimock {
           v.UnionOptions | v.UnionOptionsAsync,
           v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
         >
-  ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement(schema.options));
+  ): v.InferOutput<typeof schema> =>
+    generateUnion(schema, {
+      mockItem: (item) => this.#mock(item),
+      pickOption: (opts) => this.options.faker.helpers.arrayElement(opts)
+    }) as v.InferOutput<typeof schema>;
 
   #mockUndefined = (
     schema: v.UndefinedSchema<v.ErrorMessage<v.UndefinedIssue> | undefined>
@@ -361,7 +367,11 @@ export class Valimock {
 
   #mockVariant = <Key extends string = string>(
     schema: v.VariantSchema<Key, v.VariantOptions<Key>, v.ErrorMessage<v.VariantIssue> | undefined>
-  ): v.InferOutput<typeof schema> => this.#mock(this.options.faker.helpers.arrayElement(schema.options)) ?? {};
+  ): v.InferOutput<typeof schema> =>
+    generateVariant(schema, {
+      mockItem: (item) => this.#mock(item),
+      pickOption: (opts) => this.options.faker.helpers.arrayElement(opts)
+    }) as v.InferOutput<typeof schema>;
 
   #schemas: Record<string, (schema: never) => unknown> = {
     array: this.#mockArray,

@@ -177,7 +177,8 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
     );
     if (withinBounds(candidate, ctx)) return candidate;
     // Synthesize: `<local>@<domain>.<tld>`. Minimum valid form `a@b.co` = 6 chars.
-    const target = Math.max(6, Math.min(64, ctx.bounds.max));
+    // Honor bounds.min when it exceeds faker's typical output.
+    const target = Math.max(ctx.bounds.min, 6, Math.min(ctx.bounds.max, 64));
     const tld = `co`;
     const fixed = `@x.${tld}`; // 6 chars including the @
     const localLen = Math.max(1, target - fixed.length);
@@ -274,9 +275,11 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
       (v) => withinBounds(v, ctx)
     );
     if (withinBounds(candidate, ctx)) return candidate;
-    // Synthesize a minimal RFC-conformant email.
-    const target = Math.max(6, Math.min(64, ctx.bounds.max));
-    const localLen = Math.max(1, target - 7);
+    // Synthesize a minimal RFC-conformant email at the lower bound (when set)
+    // or a moderate default. Domain suffix `@x.com` = 6 chars; local part fills
+    // the remainder up to a sensible cap.
+    const target = Math.max(ctx.bounds.min, 6, Math.min(ctx.bounds.max, 64));
+    const localLen = Math.max(1, target - 6);
     return `${ctx.faker.string.alpha({ length: localLen, casing: `lower` })}@x.com`;
   },
 
