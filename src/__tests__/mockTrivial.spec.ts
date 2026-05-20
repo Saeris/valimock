@@ -77,3 +77,19 @@ describe(`mockRequired family (non_nullable / non_nullish / non_optional)`, () =
     }
   });
 });
+
+describe(`async wrappers (nullableAsync / nullishAsync / optionalAsync / nonNullableAsync)`, () => {
+  // The async variants of nullable/nullish/optional/non_nullable should mock
+  // identically to their sync counterparts and round-trip via parseAsync.
+  it.concurrent.each([
+    v.nullableAsync(v.string()),
+    v.nullishAsync(v.any()),
+    v.nullishAsync(v.string(), `foo`),
+    v.optionalAsync(v.string()),
+    v.optionalAsync(v.any(), `foo`),
+    v.nonNullableAsync(v.string())
+  ])(`round-trips via parseAsync (%#)`, { repeats: 5 }, async (schema) => {
+    const result = mock(schema);
+    await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
+  });
+});
