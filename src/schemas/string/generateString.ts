@@ -1,6 +1,6 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import type { SchemaMaybeWithPipe } from "../types.js";
+import type { SchemaMaybeWithPipe } from "../../types.js";
 import type { MockeryMapper } from "./keyNameGenerators.js";
 import { collectConstraints, enforce, ENFORCE_RETRY_BUDGET, generate, satisfies } from "./phases.js";
 import { DEFAULT_MAX_LENGTH, type StringContext } from "./types.js";

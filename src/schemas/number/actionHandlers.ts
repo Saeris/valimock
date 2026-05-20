@@ -1,5 +1,5 @@
-import { tightenMax, tightenMin, reconcileBounds } from "../utils/bounds.js";
-import { readArray, readNumber } from "../utils/readRequirement.js";
+import { tightenMax, tightenMin, reconcileBounds } from "../../utils/bounds.js";
+import { readArray, readNumber } from "../../utils/readRequirement.js";
 import type { NumberActionHandler, NumberContext } from "./types.js";
 
 /**

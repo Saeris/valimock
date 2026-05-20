@@ -1,6 +1,6 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import type { SchemaMaybeWithPipe } from "../types.js";
+import type { SchemaMaybeWithPipe } from "../../types.js";
 
 /**
  * Constraint state accumulated while walking a string schema's pipe.

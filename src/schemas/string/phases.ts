@@ -1,6 +1,6 @@
 import RandExp from "randexp";
-import { walkPipe } from "../utils/walkPipe.js";
-import { unhandledValidation } from "../utils/warnings.js";
+import { walkPipe } from "../../utils/walkPipe.js";
+import { unhandledValidation } from "../../utils/warnings.js";
 import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
 import { keyNameGenerators, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";

@@ -1,9 +1,9 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import { makeBounds } from "../utils/bounds.js";
-import { walkPipe } from "../utils/walkPipe.js";
-import { unhandledValidation } from "../utils/warnings.js";
-import type { SchemaMaybeWithPipe } from "../types.js";
+import { makeBounds } from "../../utils/bounds.js";
+import { walkPipe } from "../../utils/walkPipe.js";
+import { unhandledValidation } from "../../utils/warnings.js";
+import type { SchemaMaybeWithPipe } from "../../types.js";
 import { knownNumberActionTypes, numberActionHandlers, resolveBounds } from "./actionHandlers.js";
 import { NUMBER_DEFAULTS, NUMBER_RETRY_BUDGET, type NumberContext } from "./types.js";
 

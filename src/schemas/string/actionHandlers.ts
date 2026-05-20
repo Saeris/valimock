@@ -1,5 +1,5 @@
 import type * as v from "valibot";
-import { readArray, readNumber, readRequirement, readString } from "../utils/readRequirement.js";
+import { readArray, readNumber, readRequirement, readString } from "../../utils/readRequirement.js";
 import type { ActionHandler, StringContext } from "./types.js";
 
 /**

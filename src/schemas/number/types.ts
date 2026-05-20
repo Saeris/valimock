@@ -1,7 +1,7 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import type { Bounds } from "../utils/bounds.js";
-import type { SchemaMaybeWithPipe } from "../types.js";
+import type { Bounds } from "../../utils/bounds.js";
+import type { SchemaMaybeWithPipe } from "../../types.js";
 
 /**
  * Constraint state accumulated while walking a number schema's pipe.

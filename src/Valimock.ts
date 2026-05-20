@@ -3,21 +3,21 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { faker as defaultFaker, type Faker } from "@faker-js/faker";
 import * as v from "valibot";
-import { generateArray } from "./array/generateArray.js";
-import { generateBigint } from "./bigint/generateBigint.js";
-import { generateBlob } from "./blob/generateBlob.js";
-import { generateDate } from "./date/generateDate.js";
-import { generateFile } from "./file/generateFile.js";
-import { generateIntersect } from "./intersect/generateIntersect.js";
-import { generateMap } from "./map/generateMap.js";
-import { generateNumber } from "./number/generateNumber.js";
-import { generateObject } from "./object/generateObject.js";
-import { generateRecord } from "./record/generateRecord.js";
-import { generateSet } from "./set/generateSet.js";
-import { generateString } from "./string/generateString.js";
-import { generateTuple } from "./tuple/generateTuple.js";
-import { generateUnion } from "./union/generateUnion.js";
-import { generateVariant } from "./variant/generateVariant.js";
+import { generateArray } from "./schemas/array.js";
+import { generateBigint } from "./schemas/bigint.js";
+import { generateBlob } from "./schemas/blob.js";
+import { generateDate } from "./schemas/date.js";
+import { generateFile } from "./schemas/file.js";
+import { generateIntersect } from "./schemas/intersect.js";
+import { generateMap } from "./schemas/map.js";
+import { generateNumber } from "./schemas/number/generateNumber.js";
+import { generateObject } from "./schemas/object.js";
+import { generateRecord } from "./schemas/record.js";
+import { generateSet } from "./schemas/set.js";
+import { generateString } from "./schemas/string/generateString.js";
+import { generateTuple } from "./schemas/tuple.js";
+import { generateUnion } from "./schemas/union.js";
+import { generateVariant } from "./schemas/variant.js";
 import type { Schema, SchemaMaybeWithPipe, SyncSchema, MaybeRequiredSchema, RequiredSchema } from "./types.js";
 
 export class MockError extends Error {
