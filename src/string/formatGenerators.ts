@@ -246,9 +246,47 @@ export const formatGenerators: Record<string, (ctx: StringContext) => string> = 
     return `${ctx.faker.string.alpha({ length: labelLen, casing: `lower` })}.co`;
   },
 
+  // Hash: hex string of one of several well-known lengths. We pick MD5 (32 chars)
+  // because it satisfies the widest range of bound combinations.
+  hash: (ctx) => {
+    const hashLengths = [32, 40, 48, 64, 96, 128] as const;
+    const fit = hashLengths.find((n) => withinBounds(``.padEnd(n, `a`), ctx)) ?? 32;
+    return ctx.faker.string.hexadecimal({ prefix: ``, length: fit, casing: `lower` });
+  },
+
   // ISBN (Valibot v1.2): ISBN-10 or ISBN-13 with checksum, optional hyphens.
   // Faker.commerce.isbn() reliably produces valid ISBNs.
   isbn: (ctx) => ctx.faker.commerce.isbn(),
+
+  // MAC-48 (EUI-48): six pairs of hex separated by `:` or `-`.
+  mac48: (ctx) =>
+    Array.from({ length: 6 }, () => ctx.faker.string.hexadecimal({ prefix: ``, length: 2, casing: `lower` })).join(`:`),
+
+  // MAC-64 (EUI-64): eight pairs of hex separated by `:` or `-`.
+  mac64: (ctx) =>
+    Array.from({ length: 8 }, () => ctx.faker.string.hexadecimal({ prefix: ``, length: 2, casing: `lower` })).join(`:`),
+
+  // RFC-5322 email — stricter form than the basic `email` action. Faker's
+  // exampleEmail produces conformant output (no special chars in the local part).
+  rfc_email: (ctx) => {
+    const candidate = retryUntil(
+      () => ctx.faker.internet.exampleEmail(),
+      (v) => withinBounds(v, ctx)
+    );
+    if (withinBounds(candidate, ctx)) return candidate;
+    // Synthesize a minimal RFC-conformant email.
+    const target = Math.max(6, Math.min(64, ctx.bounds.max));
+    const localLen = Math.max(1, target - 7);
+    return `${ctx.faker.string.alpha({ length: localLen, casing: `lower` })}@x.com`;
+  },
+
+  // Slug: lowercase alphanumerics separated by `-` or `_`.
+  slug: (ctx) => {
+    const wordCount = Math.max(1, Math.min(5, Math.floor(Math.max(1, ctx.bounds.max) / 4)));
+    return Array.from({ length: wordCount }, () =>
+      ctx.faker.string.alphanumeric({ length: ctx.faker.number.int({ min: 2, max: 6 }), casing: `lower` })
+    ).join(`-`);
+  },
 
   // ISRC (Valibot v1.3): International Standard Recording Code.
   // /^(?:[A-Z]{2}[A-Z\d]{3}\d{7}|[A-Z]{2}-[A-Z\d]{3}-\d{2}-\d{5})$/

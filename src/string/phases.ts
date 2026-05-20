@@ -118,6 +118,8 @@ export const enforce = (value: string, ctx: StringContext): string => {
 /** True iff `value` satisfies every constraint encoded in `ctx`. */
 export const satisfies = (value: string, ctx: StringContext): boolean => {
   if (value.length < ctx.bounds.min || value.length > ctx.bounds.max) return false;
+  if (ctx.forbiddenLengths.has(value.length)) return false;
+  if (ctx.forbiddenValues.has(value)) return false;
   if (ctx.regex && !ctx.regex.test(value)) return false;
   if (ctx.startsWith !== undefined && !value.startsWith(ctx.startsWith)) return false;
   if (ctx.endsWith !== undefined && !value.endsWith(ctx.endsWith)) return false;

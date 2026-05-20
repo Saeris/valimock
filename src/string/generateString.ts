@@ -46,10 +46,27 @@ export const generateString = (schema: StringSchemaInput, options: GenerateStrin
     startsWith: undefined,
     endsWith: undefined,
     excludes: [],
+    forbiddenLengths: new Set(),
+    exactValue: undefined,
+    allowedValues: undefined,
+    forbiddenValues: new Set(),
     warnings: []
   };
 
   collectConstraints(ctx);
+
+  // Exact-value pin wins over everything else.
+  if (ctx.exactValue !== undefined) {
+    flushWarnings(ctx, options.onWarn);
+    return ctx.exactValue;
+  }
+  // Allow-list: pick a value, falling back to a non-forbidden one if any of
+  // the allowed values were ALSO marked forbidden.
+  if (ctx.allowedValues && ctx.allowedValues.length > 0) {
+    const allowed = ctx.allowedValues.filter((v) => !ctx.forbiddenValues.has(v));
+    flushWarnings(ctx, options.onWarn);
+    return ctx.faker.helpers.arrayElement(allowed.length > 0 ? allowed : ctx.allowedValues);
+  }
 
   // User-supplied stringMap takes precedence over internal generators, but
   // only when there's a keyName to look up.

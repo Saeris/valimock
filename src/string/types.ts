@@ -28,6 +28,15 @@ export interface StringContext {
   /** Excluded substrings (from `excludes` actions). */
   excludes: readonly string[];
 
+  /** Forbidden exact lengths from `not_length` actions. */
+  forbiddenLengths: Set<number>;
+  /** Exact value pin from `value` action. Wins over generators. */
+  exactValue: string | undefined;
+  /** Allow-list from `values` action. */
+  allowedValues: readonly string[] | undefined;
+  /** Forbidden exact values from `not_value` / `not_values` actions. */
+  forbiddenValues: Set<string>;
+
   /** Diagnostics — unknown action types, conflicting constraints, etc. Surfaced via `Valimock.options`. */
   warnings: string[];
 }
