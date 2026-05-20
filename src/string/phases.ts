@@ -48,6 +48,18 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
     return ctx.faker.helpers.arrayElement(ctx.examples);
   }
 
+  // Word-count constraints route through faker.lorem.words rather than the
+  // format generator, since format outputs (emails, uuids) aren't multi-word.
+  if (ctx.wordCountSet) {
+    const lo = Math.max(1, ctx.wordBounds.min);
+    const hi = Math.max(lo, ctx.wordBounds.max);
+    let count = ctx.faker.number.int({ min: lo, max: hi });
+    // Avoid forbidden counts by nudging within bounds.
+    while (ctx.forbiddenWordCounts.has(count) && count + 1 <= hi) count += 1;
+    while (ctx.forbiddenWordCounts.has(count) && count - 1 >= lo) count -= 1;
+    return ctx.faker.lorem.words(count);
+  }
+
   if (ctx.format && ctx.format in formatGenerators) {
     return formatGenerators[ctx.format](ctx);
   }
@@ -125,7 +137,27 @@ export const satisfies = (value: string, ctx: StringContext): boolean => {
   if (ctx.endsWith !== undefined && !value.endsWith(ctx.endsWith)) return false;
   for (const required of ctx.includes) if (!value.includes(required)) return false;
   for (const banned of ctx.excludes) if (value.includes(banned)) return false;
+  if (ctx.wordCountSet) {
+    const count = countWords(value);
+    if (count < ctx.wordBounds.min || count > ctx.wordBounds.max) return false;
+    if (ctx.forbiddenWordCounts.has(count)) return false;
+  }
   return true;
+};
+
+/**
+ * Approximate Valibot's `Intl.Segmenter({granularity: "word"})` count using
+ * Intl.Segmenter when available, falling back to a `/\S+/g` match. For our
+ * lorem output the two agree.
+ */
+const countWords = (value: string): number => {
+  if (typeof Intl !== `undefined` && `Segmenter` in Intl) {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: `word` });
+    let count = 0;
+    for (const seg of segmenter.segment(value)) if (seg.isWordLike) count++;
+    return count;
+  }
+  return value.match(/\S+/g)?.length ?? 0;
 };
 
 export { ENFORCE_RETRY_BUDGET };

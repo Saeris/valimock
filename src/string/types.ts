@@ -37,6 +37,13 @@ export interface StringContext {
   /** Forbidden exact values from `not_value` / `not_values` actions. */
   forbiddenValues: Set<string>;
 
+  /** Word-count bounds (from words / min_words / max_words actions). */
+  wordBounds: { min: number; max: number };
+  /** Forbidden exact word counts (from not_words). */
+  forbiddenWordCounts: Set<number>;
+  /** Set when any word-count action was collected (so the generator routes to word output). */
+  wordCountSet: boolean;
+
   /** Diagnostics — unknown action types, conflicting constraints, etc. Surfaced via `Valimock.options`. */
   warnings: string[];
 }

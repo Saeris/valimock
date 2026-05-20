@@ -50,6 +50,9 @@ export const generateString = (schema: StringSchemaInput, options: GenerateStrin
     exactValue: undefined,
     allowedValues: undefined,
     forbiddenValues: new Set(),
+    wordBounds: { min: 0, max: Number.MAX_SAFE_INTEGER },
+    forbiddenWordCounts: new Set(),
+    wordCountSet: false,
     warnings: []
   };
 

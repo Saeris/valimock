@@ -29,6 +29,30 @@ export const actionHandlers: Record<string, ActionHandler> = {
   max_graphemes: setLengthMax,
   not_graphemes: addForbiddenLength,
   not_length: addForbiddenLength,
+  // Word counts use Intl.Segmenter in Valibot; for our lorem output a simple
+  // space-separated token count is equivalent.
+  words: (ctx, action) => {
+    const n = readNumberRequirement(action);
+    if (n === undefined) return;
+    ctx.wordBounds = { min: n, max: n };
+    ctx.wordCountSet = true;
+  },
+  min_words: (ctx, action) => {
+    const n = readNumberRequirement(action);
+    if (n === undefined) return;
+    ctx.wordBounds = { min: Math.max(ctx.wordBounds.min, n), max: Math.max(ctx.wordBounds.max, n) };
+    ctx.wordCountSet = true;
+  },
+  max_words: (ctx, action) => {
+    const n = readNumberRequirement(action);
+    if (n === undefined) return;
+    ctx.wordBounds = { min: Math.min(ctx.wordBounds.min, n), max: Math.min(ctx.wordBounds.max, n) };
+    ctx.wordCountSet = true;
+  },
+  not_words: (ctx, action) => {
+    const n = readNumberRequirement(action);
+    if (n !== undefined) ctx.forbiddenWordCounts.add(n);
+  },
   non_empty: (ctx) => {
     if (ctx.bounds.min < 1) ctx.bounds.min = 1;
   },

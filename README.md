@@ -99,6 +99,12 @@ Any schema type Valimock doesn't yet support can be handled by supplying a
 | :-----: | :--------: | :------: | :---------: | :---------: | :--------: |
 |    ✔    |     ❌     |    ✔     |      ✔      |      ✔      |     ✔      |
 
+#### Set
+
+| `size` | `minSize` | `maxSize` | `notSize` |
+| :----: | :-------: | :-------: | :-------: |
+|   ✔    |     ✔     |     ✔     |     ✔     |
+
 #### BigInt
 
 | `gtValue` | `ltValue` | `maxValue` | `minValue` | `value` | `values` |
@@ -119,27 +125,30 @@ Any schema type Valimock doesn't yet support can be handled by supplying a
 
 #### String
 
-| `base64` | `bic` | `creditCard` | `cuid2` | `decimal` | `digits` | `domain` | `email` | `emoji` | `empty` | `endsWith` | `excludes` |
-| :------: | :---: | :----------: | :-----: | :-------: | :------: | :------: | :-----: | :-----: | :-----: | :--------: | :--------: |
-|    ✔     |   ✔   |      ✔       |    ✔    |     ✔     |    ✔     |    ✔     |    ✔    |    ✔    |    ✔    |     ✔      |     ✔      |
+| `base64` | `bic` | `bytes` | `creditCard` | `cuid2` | `decimal` | `digits` | `domain` | `email` | `emoji` | `empty` | `endsWith` | `excludes` |
+| :------: | :---: | :-----: | :----------: | :-----: | :-------: | :------: | :------: | :-----: | :-----: | :-----: | :--------: | :--------: |
+|    ✔     |   ✔   |    ✔    |      ✔       |    ✔    |     ✔     |    ✔     |    ✔     |    ✔    |    ✔    |    ✔    |     ✔      |     ✔      |
 
-| `hexColor` | `hexadecimal` | `imei` | `includes` | `ip` | `ipv4` | `ipv6` | `isbn` | `isoDate` | `isoDateTime` | `isoDateTimeSecond` | `isoTime` |
-| :--------: | :-----------: | :----: | :--------: | :--: | :----: | :----: | :----: | :-------: | :-----------: | :-----------------: | :-------: |
-|     ✔      |       ✔       |   ✔    |     ✔      |  ✔   |   ✔    |   ✔    |   ✔    |     ✔     |       ✔       |          ✔          |     ✔     |
+| `graphemes` | `hash` | `hexColor` | `hexadecimal` | `imei` | `includes` | `ip` | `ipv4` | `ipv6` | `isbn` | `isoDate` | `isoDateTime` | `isoDateTimeSecond` |
+| :---------: | :----: | :--------: | :-----------: | :----: | :--------: | :--: | :----: | :----: | :----: | :-------: | :-----------: | :-----------------: |
+|      ✔      |   ✔    |     ✔      |       ✔       |   ✔    |     ✔      |  ✔   |   ✔    |   ✔    |   ✔    |     ✔     |       ✔       |          ✔          |
 
-| `isoTimeSecond` | `isoTimestamp` | `isoWeek` | `isrc` | `jwsCompact` | `length` | `mac` | `maxLength` | `minLength` | `nanoid` | `nonEmpty` |
-| :-------------: | :------------: | :-------: | :----: | :----------: | :------: | :---: | :---------: | :---------: | :------: | :--------: |
-|        ✔        |       ✔        |     ✔     |   ✔    |      ✔       |    ✔     |   ✔   |      ✔      |      ✔      |    ✔     |     ✔      |
+| `isoTime` | `isoTimeSecond` | `isoTimestamp` | `isoWeek` | `isrc` | `jwsCompact` | `length` | `mac` | `mac48` | `mac64` | `maxBytes` | `maxGraphemes` | `maxLength` |
+| :-------: | :-------------: | :------------: | :-------: | :----: | :----------: | :------: | :---: | :-----: | :-----: | :--------: | :------------: | :---------: |
+|     ✔     |        ✔        |       ✔        |     ✔     |   ✔    |      ✔       |    ✔     |   ✔   |    ✔    |    ✔    |     ✔      |       ✔        |      ✔      |
 
-| `octal` | `regex` | `startsWith` | `ulid` | `url` | `uuid` |
-| :-----: | :-----: | :----------: | :----: | :---: | :----: |
-|    ✔    |    ✔    |      ✔       |   ✔    |   ✔   |   ✔    |
+| `maxWords` | `minBytes` | `minGraphemes` | `minLength` | `minWords` | `nanoid` | `nonEmpty` | `notBytes` | `notGraphemes` | `notLength` | `notValue` | `notValues` | `notWords` |
+| :--------: | :--------: | :------------: | :---------: | :--------: | :------: | :--------: | :--------: | :------------: | :---------: | :--------: | :---------: | :--------: |
+|     ✔      |     ✔      |       ✔        |      ✔      |     ✔      |    ✔     |     ✔      |     ✔      |       ✔        |      ✔      |     ✔      |      ✔      |     ✔      |
 
-Not yet implemented (string): `bytes` / `hash` / `mac48` / `mac64` /
-`maxBytes` / `maxGraphemes` / `maxWords` / `minBytes` / `minGraphemes` /
-`minWords` / `notBytes` / `notEntries` / `notGraphemes` / `notLength` /
-`notValue` / `notValues` / `notWords` / `rfcEmail` / `slug` / `value` /
-`values` / `words`.
+| `octal` | `regex` | `rfcEmail` | `slug` | `startsWith` | `ulid` | `url` | `uuid` | `value` | `values` | `words` |
+| :-----: | :-----: | :--------: | :----: | :----------: | :----: | :---: | :----: | :-----: | :------: | :-----: |
+|    ✔    |    ✔    |     ✔      |   ✔    |      ✔       |   ✔    |   ✔   |   ✔    |    ✔    |    ✔     |    ✔    |
+
+Not yet implemented (string): `notEntries`. The `bytes` / `graphemes` /
+`words` families currently treat each unit as `.length` (correct for ASCII
+output, approximate for multi-byte content); a future enhancement may
+distinguish them via `Intl.Segmenter`.
 
 When Valimock encounters an action it doesn't know how to handle inside a
 string pipe, it emits an `onWarn` notice and ignores the action — the

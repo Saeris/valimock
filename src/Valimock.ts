@@ -7,16 +7,9 @@ import { generateArray } from "./array/generateArray.js";
 import { generateBigint } from "./bigint/generateBigint.js";
 import { generateDate } from "./date/generateDate.js";
 import { generateNumber } from "./number/generateNumber.js";
+import { generateSet } from "./set/generateSet.js";
 import { generateString } from "./string/generateString.js";
-import type {
-  GenericPipe,
-  GenericPipeAsync,
-  Schema,
-  SchemaMaybeWithPipe,
-  SyncSchema,
-  MaybeRequiredSchema,
-  RequiredSchema
-} from "./types.js";
+import type { Schema, SchemaMaybeWithPipe, SyncSchema, MaybeRequiredSchema, RequiredSchema } from "./types.js";
 
 export class MockError extends Error {
   constructor(public typeName?: string) {
@@ -123,19 +116,6 @@ export class Valimock {
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
   }
-
-  #getChecks = ([_, ...pipe]: GenericPipe | GenericPipeAsync | []): Record<string, string | null> =>
-    Object.fromEntries(
-      (pipe as Array<v.GenericPipeItem | v.GenericPipeItemAsync>).reduce<Array<[key: string, expects: string | null]>>(
-        (arr, item) => {
-          if (v.isOfKind(`validation`, item)) {
-            arr.push([item.type, item.expects]);
-          }
-          return arr;
-        },
-        []
-      )
-    );
 
   #getValidEnumValues = (obj: v.Enum): Array<number | string> =>
     Object.values(
@@ -336,26 +316,12 @@ export class Valimock {
       | v.SetSchemaAsync<Schema, v.ErrorMessage<v.SetIssue> | undefined>
   >(
     schema: SchemaMaybeWithPipe<TSchema>
-  ): v.InferOutput<TSchema> => {
-    const checks = this.#getChecks(schema.pipe ?? []);
-    const fixed = checks.size ? Number(checks.size) : null;
-    let min = checks.min_size ? Number(checks.min_size.replace(`>=`, ``)) : 1;
-    const max = checks.max_size ? Number(checks.max_size.replace(`<=`, ``)) : 5;
-    if (min > max) {
-      min = max;
-    }
-    const targetLength =
-      fixed ??
-      this.options.faker.number.int({
-        min,
-        max
-      });
-    const result = new Set<Schema>();
-    while (result.size < targetLength) {
-      result.add(this.#mock(schema.value));
-    }
-    return result;
-  };
+  ): v.InferOutput<TSchema> =>
+    generateSet(schema, {
+      faker: this.options.faker,
+      onWarn: this.options.onWarn,
+      mockItem: (item) => this.#mock(item)
+    }) as v.InferOutput<TSchema>;
 
   #mockString = (
     schema: SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>,
