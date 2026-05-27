@@ -68,12 +68,16 @@ describe(`example test`, () => {
 
 ## API Coverage
 
-Valimock's string mocking is built around a small pipeline (`src/string/`)
+Valimock's string mocking is built around a small pipeline (`src/schemas/string/`)
 with a per-action registry. Adding support for a new Valibot action is a
 one-line addition to the registry. See [Contributing](#-contributing) below.
 
 Any schema type Valimock doesn't yet support can be handled by supplying a
-`customMocks` entry keyed by the schema's `type` field.
+`customMocks` entry keyed by the schema's `type` field. When Valimock has
+no built-in mocker and no matching `customMocks` entry (notably for
+`v.custom(...)`), it emits an `onWarn` notice and returns `undefined`
+rather than silently producing an invalid value. Set
+`throwOnUnknownType: true` to turn that into a thrown `MockError`.
 
 ### Schemas
 
@@ -184,10 +188,10 @@ yarn bumpy add       # create a bump file for your PR
 ```
 
 Adding support for a new Valibot string action is typically a two-line
-change: register a handler in [`src/string/actionHandlers.ts`](src/string/actionHandlers.ts)
+change: register a handler in [`src/schemas/string/actionHandlers.ts`](src/schemas/string/actionHandlers.ts)
 and (if the action is a format selector) add the matching generator to
-[`src/string/formatGenerators.ts`](src/string/formatGenerators.ts).
-The property-based test in [`src/__tests__/mockString.property.spec.ts`](src/__tests__/mockString.property.spec.ts)
+[`src/schemas/string/formatGenerators.ts`](src/schemas/string/formatGenerators.ts).
+The property-based block in [`src/__tests__/mockString.spec.ts`](src/__tests__/mockString.spec.ts)
 will exercise the new combination automatically once the action appears
 in its `formats` table.
 
