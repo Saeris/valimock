@@ -29,7 +29,7 @@ const blobSchemaArb: fc.Arbitrary<v.GenericSchema<Blob>> = fc.oneof(
   })
 );
 
-describe(`mockBlob property-based`, () => {
+describe(`mockBlob`, () => {
   it(`every mock value round-trips through Valibot's parse`, () => {
     fc.assert(
       fc.property(blobSchemaArb, (schema) => {

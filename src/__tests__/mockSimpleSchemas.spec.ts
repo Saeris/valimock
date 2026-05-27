@@ -16,7 +16,7 @@ const mock = new Valimock({ onWarn: () => {} }).mock;
  * That's covered by a single unit test below.
  */
 
-describe(`mockSimpleSchemas property-based`, () => {
+describe(`mockSimpleSchemas`, () => {
   it(`any: every value is structurally legal`, () => {
     const schema = v.any();
     fc.assert(

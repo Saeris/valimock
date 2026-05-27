@@ -21,7 +21,7 @@ const fileSchemaArb: fc.Arbitrary<v.GenericSchema<File>> = fc.oneof(
     .map((types) => v.pipe(v.file(), v.mimeType(types) as FilePipeItem) as unknown as v.GenericSchema<File>)
 );
 
-describe(`mockFile property-based`, () => {
+describe(`mockFile`, () => {
   it(`every mock value round-trips through Valibot's parse`, () => {
     fc.assert(
       fc.property(fileSchemaArb, (schema) => {
