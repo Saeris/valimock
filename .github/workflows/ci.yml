@@ -16,7 +16,7 @@ jobs:
         # Active LTS and Current track the Node release calendar automatically.
         # Previous LTS is pinned; bump it once per year when a new even-numbered
         # Node major reaches LTS status.
-        node-version: ["22", "lts", "current"]
+        node-version: ["22", "lts", "latest"]
     steps:
       - uses: actions/checkout@v6
 
