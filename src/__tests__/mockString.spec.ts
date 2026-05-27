@@ -2,6 +2,7 @@ import * as fc from "fast-check";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
+import { captureWarnings } from "./helpers/captureWarnings.js";
 
 type StringPipeItem = v.PipeItem<string, string, v.BaseIssue<unknown>>;
 
@@ -383,11 +384,10 @@ describe(`mockString`, () => {
 
   describe(`edge cases — diagnostics`, () => {
     it(`onWarn fires when retry budget is exhausted on impossible constraints`, () => {
-      const warnings: string[] = [];
-      const m = new Valimock({ onWarn: (msg) => warnings.push(msg) }).mock;
+      const { mock, warnings } = captureWarnings();
       // Inherently unsatisfiable: length(3) + email() (no valid email fits in 3 chars).
       const schema = v.pipe(v.string(), v.email(), v.length(3));
-      m(schema);
+      mock(schema);
       expect(warnings.some((w) => w.includes(`Could not satisfy`))).toBe(true);
     });
   });

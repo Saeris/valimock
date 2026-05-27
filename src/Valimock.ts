@@ -156,6 +156,15 @@ export class Valimock {
       if (this.options.throwOnUnknownType) {
         throw new MockError(schema.type);
       }
+      // Schemas like `v.custom(...)` validate via an arbitrary user predicate
+      // we can't introspect, so we have no general way to produce a satisfying
+      // value. Surface that explicitly (Rule 12 — fail loud) so callers can
+      // route the case via `customMocks` instead of silently receiving undefined.
+      this.options.onWarn(
+        `No built-in mocker for schema type \`${schema.type}\`. ` +
+          `Provide a \`customMocks.${schema.type}\` entry, set \`throwOnUnknownType: true\` to surface this as an error, ` +
+          `or restructure the schema. Returning \`undefined\`.`
+      );
     } catch (err) {
       if (err instanceof MockError) {
         throw err;

@@ -2,6 +2,7 @@ import * as fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
+import { captureWarnings } from "./helpers/captureWarnings.js";
 
 const mockSchema = new Valimock({ onWarn: () => {} }).mock;
 
@@ -93,13 +94,12 @@ describe(`mockIntersect`, () => {
       // string. The deep-merge sees unequal primitives and emits a "merge issue"
       // warning. The orchestrator keeps the earlier value.
       const schema = v.intersect([v.string(), v.string()]);
-      const warnings: string[] = [];
-      const m = new Valimock({ onWarn: (msg) => warnings.push(msg) }).mock;
-      const result = m(schema);
+      const { mock, warnings } = captureWarnings();
+      const result = mock(schema);
       expect(typeof result).toBe(`string`);
       let sawWarning = false;
       for (let i = 0; i < 30; i++) {
-        m(schema);
+        mock(schema);
         if (warnings.some((w) => w.includes(`incompatible`))) {
           sawWarning = true;
           break;

@@ -88,3 +88,40 @@ Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.de
 - [ ] Check if there are `vite.config.ts` tasks or `package.json` scripts necessary for validation, run via `vp run <script>`.
 
 <!--VITE PLUS END-->
+
+<!--WALLABY START-->
+
+# Using Wallaby for Test Feedback
+
+Wallaby runs continuously and gives near-instant test feedback. Prefer it over a fresh `vp test` run — results are already computed and streamed. There are two surfaces:
+
+- **MCP tools** (`mcp__wallaby__*`) — use when Wallaby is alive in the editor. No process spawn, lowest latency.
+- **Wallaby CLI** (`npx -y @wallabyjs/cli ...`) — May 2026 addition. Works headless, with no editor session and no MCP server. Use when MCP returns no data, when working in a worktree, or when you want a single Markdown report you can grep.
+
+Docs: https://wallabyjs.com/docs/features/mcp/ (MCP tools) and https://wallabyjs.com/whatsnew/cli.html (CLI). The Wallaby `SKILL.md` is the canonical workflow.
+
+## Workflow (in order)
+
+1. **Get failures** — `mcp__wallaby__wallaby_failingTests`, or `npx -y @wallabyjs/cli run --skill` headless. The result includes test name, file, error, stack trace, and runtime logs.
+2. **(Optional) Trace coverage** — `mcp__wallaby__wallaby_coveredLinesForTest` with the failing test's ID, only if step 1's stack trace doesn't make the cause obvious.
+3. **(Optional) Inspect runtime values** — `mcp__wallaby__wallaby_runtimeValues` / `wallaby_runtimeValuesByTest`, or `npx -y @wallabyjs/cli inspect "{path:'src/x.ts',location:{fragment:'...'},expression:'...'}"` headless. Skip if the cause is already clear.
+4. **Fix the code.**
+5. **Verify** — re-run step 1 to confirm the fix and check for regressions. `wallaby_testById` works for a single targeted check.
+6. **(Snapshots)** — `wallaby_updateTestSnapshots` / `wallaby_updateFileSnapshots` (preferred) or `--snapshots` on the CLI. Only when the change is intentional.
+
+## CLI specifics
+
+- Always pass `--skill` to `run` — it keeps the Wallaby instance alive between invocations so follow-up calls reuse cached results.
+- `run` with no args reports the whole project; pass test file paths to scope to specific files.
+- Reports are Markdown with named sections (`Failing Tests`, `All Tests`, `Coverage`, `Runtime Values`). For large reports, `grep -Pzo` for specific tests or files instead of reading the whole file.
+- Non-zero exit code usually means failing tests, but can also mean CLI/Wallaby itself failed — check the report's `Fatal Error` / `Global Errors` sections.
+- `npx -y @wallabyjs/cli run --update` updates Wallaby if the CLI reports a compatibility error.
+
+## Rules
+
+- Prefer Wallaby (MCP or CLI) over `vp test` for read-only inspection. Both produce correct results; Wallaby is faster.
+- A clean Wallaby report ≡ a clean `vp test` run. Trust it.
+- If MCP returns `<No data available>`, Wallaby is restarting; fall back to `npx -y @wallabyjs/cli run --skill` rather than `vp test` — same source of truth, headless.
+- Never call `wallaby_updateProjectSnapshots`/`--snapshots` (without a path) casually — it rewrites every snapshot. Prefer file-scoped or test-scoped variants.
+
+<!--WALLABY END-->

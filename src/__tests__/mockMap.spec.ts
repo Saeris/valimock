@@ -2,6 +2,7 @@ import * as fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
+import { captureWarnings } from "./helpers/captureWarnings.js";
 
 const mockWith = (mapEntriesLength: number): Valimock[`mock`] =>
   new Valimock({ onWarn: () => {}, mapEntriesLength }).mock;
@@ -62,9 +63,8 @@ describe(`mockMap`, () => {
       // picklist with 2 options + mapEntriesLength=5 → at most 2 distinct keys
       // before the retry budget exhausts.
       const schema = v.map(v.picklist([`a`, `b`]), v.number()) as unknown as v.GenericSchema;
-      const warnings: string[] = [];
-      const m = new Valimock({ onWarn: (msg) => warnings.push(msg), mapEntriesLength: 5 }).mock;
-      const result = m(schema) as Map<string, number>;
+      const { mock, warnings } = captureWarnings({ mapEntriesLength: 5 });
+      const result = mock(schema) as Map<string, number>;
       expect(result.size).toBeGreaterThanOrEqual(1);
       expect(result.size).toBeLessThanOrEqual(2);
       for (const key of result.keys()) {

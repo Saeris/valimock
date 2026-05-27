@@ -1,24 +1,6 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
-import {
-  any,
-  boolean,
-  function_,
-  lazy,
-  nullable,
-  nullish,
-  number,
-  object,
-  optional,
-  parse,
-  string,
-  symbol,
-  undefined_,
-  undefinedable,
-  unknown,
-  void_
-} from "valibot";
 import { Valimock } from "../Valimock.js";
 
 const mock = new Valimock({ onWarn: () => {} }).mock;
@@ -36,71 +18,71 @@ const mock = new Valimock({ onWarn: () => {} }).mock;
 
 describe(`mockSimpleSchemas property-based`, () => {
   it(`any: every value is structurally legal`, () => {
-    const schema = any();
+    const schema = v.any();
     fc.assert(
       fc.property(fc.nat(), () => {
         // any() accepts anything; parse should be identity.
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
   });
 
   it(`unknown: every value is structurally legal`, () => {
-    const schema = unknown();
+    const schema = v.unknown();
     fc.assert(
       fc.property(fc.nat(), () => {
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
   });
 
   it(`void: always returns undefined`, () => {
-    const schema = void_();
+    const schema = v.void_();
     fc.assert(
       fc.property(fc.nat(), () => {
         const result = mock(schema);
         expect(result).toBeUndefined();
-        expect(parse(schema, result)).toBeUndefined();
+        expect(v.parse(schema, result)).toBeUndefined();
       }),
       { numRuns: 50 }
     );
   });
 
   it(`undefined: always returns undefined`, () => {
-    const schema = undefined_();
+    const schema = v.undefined_();
     fc.assert(
       fc.property(fc.nat(), () => {
         const result = mock(schema);
         expect(result).toBeUndefined();
-        expect(parse(schema, result)).toBeUndefined();
+        expect(v.parse(schema, result)).toBeUndefined();
       }),
       { numRuns: 50 }
     );
   });
 
   it(`symbol: returns a symbol`, () => {
-    const schema = symbol();
+    const schema = v.symbol();
     fc.assert(
       fc.property(fc.nat(), () => {
         const result = mock(schema);
         expect(typeof result).toBe(`symbol`);
-        expect(parse(schema, result)).toBe(result);
+        expect(v.parse(schema, result)).toBe(result);
       }),
       { numRuns: 50 }
     );
   });
 
   it(`function: returns a callable`, () => {
-    const schema = function_();
+    const schema = v.function_();
     fc.assert(
       fc.property(fc.nat(), () => {
         const result = mock(schema);
         expect(typeof result).toBe(`function`);
-        expect(parse(schema, result)).toBe(result);
+        expect(v.parse(schema, result)).toBe(result);
       }),
       { numRuns: 50 }
     );
@@ -108,17 +90,17 @@ describe(`mockSimpleSchemas property-based`, () => {
 
   it(`undefinedable: wraps inner schema, allows undefined`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(string(), number(), boolean()), (inner) => {
-        const schema = undefinedable(inner as v.GenericSchema);
+      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
+        const schema = v.undefinedable(inner as v.GenericSchema);
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
   });
 
   it(`undefinedable with default value is honored`, () => {
-    const schema = undefinedable(string(), `default-value`);
+    const schema = v.undefinedable(v.string(), `default-value`);
     // Whatever the coin flip, the mocker should always emit the default
     // value when one is declared (matching parse() behavior on missing input).
     for (let i = 0; i < 20; i++) {
@@ -129,10 +111,10 @@ describe(`mockSimpleSchemas property-based`, () => {
 
   it(`optional: wraps inner schema, allows undefined or missing`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(string(), number(), boolean()), (inner) => {
-        const schema = optional(inner as v.GenericSchema);
+      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
+        const schema = v.optional(inner as v.GenericSchema);
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
@@ -140,10 +122,10 @@ describe(`mockSimpleSchemas property-based`, () => {
 
   it(`nullable: wraps inner schema, allows null`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(string(), number(), boolean()), (inner) => {
-        const schema = nullable(inner as v.GenericSchema);
+      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
+        const schema = v.nullable(inner as v.GenericSchema);
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
@@ -151,10 +133,10 @@ describe(`mockSimpleSchemas property-based`, () => {
 
   it(`nullish: wraps inner schema, allows null or undefined`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(string(), number(), boolean()), (inner) => {
-        const schema = nullish(inner as v.GenericSchema);
+      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
+        const schema = v.nullish(inner as v.GenericSchema);
         const result = mock(schema);
-        expect(parse(schema, result)).toEqual(result);
+        expect(v.parse(schema, result)).toEqual(result);
       }),
       { numRuns: 100 }
     );
@@ -163,13 +145,13 @@ describe(`mockSimpleSchemas property-based`, () => {
   it(`lazy: recurses into getter`, () => {
     // Self-referential schema modelling a linked list of strings.
     type Node = { value: string; next?: Node };
-    const nodeSchema: v.GenericSchema<Node> = object({
-      value: string(),
-      next: optional(lazy(() => nodeSchema))
+    const nodeSchema: v.GenericSchema<Node> = v.object({
+      value: v.string(),
+      next: v.optional(v.lazy(() => nodeSchema))
     }) as unknown as v.GenericSchema<Node>;
     for (let i = 0; i < 20; i++) {
       const result = mock(nodeSchema);
-      expect(parse(nodeSchema, result)).toEqual(result);
+      expect(v.parse(nodeSchema, result)).toEqual(result);
     }
   });
 });
