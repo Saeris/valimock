@@ -2,34 +2,28 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [main]
   pull_request:
-    types: [opened, synchronize]
+    branches: [main]
 
 jobs:
-  test:
-    name: Lint, Test, and Typecheck
-    timeout-minutes: 15
-    runs-on: windows-latest
-
+  ci:
+    name: Check & Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
-
+        # Active LTS and Current track the Node release calendar automatically.
+        # Previous LTS is pinned; bump it once per year when a new even-numbered
+        # Node major reaches LTS status.
+        node-version: ["22", "lts", "latest"]
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+      - uses: actions/checkout@v6
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
+          cache: true
 
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Lint, Test, Typecheck
-        run: yarn ci
+      - run: vp check
+      - run: vp test

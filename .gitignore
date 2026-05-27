@@ -90,3 +90,6 @@ cypress/e2e/build
 .DS_Store
 .vercel/*
 !.vercel/package.json
+
+# Claude Code local agent state
+.claude/

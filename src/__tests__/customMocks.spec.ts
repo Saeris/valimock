@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { parse, custom } from "valibot";
+import { describe, expect, it } from "vite-plus/test";
+import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
-const customSchema = custom((input) => typeof input === `string` && input === `custom`, `Invalid value!`);
+const customSchema = v.custom((input) => typeof input === `string` && input === `custom`, `Invalid value!`);
 
 const mockSchema = new Valimock({
   customMocks: {
@@ -23,7 +23,7 @@ describe(`customMocks config`, () => {
     { repeats: 5 },
     (schema) => {
       const result = mockSchema(schema);
-      expect(parse(schema, result)).toStrictEqual(result);
+      expect(v.parse(schema, result)).toStrictEqual(result);
     }
   );
 });
