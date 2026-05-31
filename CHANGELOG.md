@@ -1,6 +1,12 @@
 # valimock
 
 
+
+## 1.5.1
+<sub>2026-05-31</sub>
+
+-  *(patch)* - Fix broken export references in package.json
+
 ## 1.5.0
 <sub>2026-05-27</sub>
 
