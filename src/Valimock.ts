@@ -139,6 +139,17 @@ export class Valimock {
   #mock = <T extends Schema>(schema: T, keyName?: string): v.InferOutput<typeof schema> => {
     try {
       if (this.options.seed) this.options.faker.seed(this.options.seed);
+      // `customMocks` is consulted BEFORE every built-in path (including the
+      // string fast-path below) so callers can override Valimock's behavior
+      // for any schema type. Common use: `customMocks: { any: () => undefined }`
+      // to opt out of `#mockAny`'s random concrete-value generation when
+      // downstream tests were written against schemas where `v.any()` fields
+      // are expected to stay absent. Callers who register `customMocks.string`
+      // forfeit keyName-based string routing inside their override — that's a
+      // deliberate trade for full overridability.
+      if (Object.keys(this.options.customMocks).includes(schema.type)) {
+        return this.options.customMocks[schema.type](schema, this.options);
+      }
       if (
         v.isOfType<`string`, Schema | SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>>(
           `string`,
@@ -149,9 +160,6 @@ export class Valimock {
       }
       if (Object.keys(this.#schemas).includes(schema.type)) {
         return this.#schemas[schema.type](schema as never);
-      }
-      if (Object.keys(this.options.customMocks).includes(schema.type)) {
-        return this.options.customMocks[schema.type](schema, this.options);
       }
       if (this.options.throwOnUnknownType) {
         throw new MockError(schema.type);
