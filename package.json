@@ -19,17 +19,12 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/Valimock.mjs",
-  "module": "./dist/Valimock.mjs",
-  "types": "./dist/Valimock.d.mts",
   "exports": {
     ".": {
-      "module": "./dist/Valimock.mjs",
       "import": {
         "types": "./dist/Valimock.d.mts",
         "default": "./dist/Valimock.mjs"
-      },
-      "default": "./dist/Valimock.mjs"
+      }
     },
     "./package.json": "./package.json"
   },
@@ -68,7 +63,7 @@
     "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
   },
   "engines": {
-    "node": ">=22.x"
+    "node": ">=22"
   },
   "packageManager": "yarn@4.14.1"
 }
