@@ -10,13 +10,22 @@ import type * as v from "valibot";
  *   1. Mock option[0] as the base.
  *   2. For each subsequent option, mock it and deep-merge against the base
  *      following Valibot's `_merge` semantics (objects merge by key, equal
- *      primitives reduce to themselves, mismatched primitives surface a
- *      warning and the base wins).
+ *      primitives reduce to themselves).
  *
- * This produces correct output for the common object-extends-object case
- * and best-effort output for the rare primitive-intersect case (which is
- * usually degenerate — the only satisfying value would be one that matches
- * every option's constraint pipeline simultaneously).
+ * **Key-level recovery for nested merges.** When two options share a key
+ * but our independent mocking happens to produce divergent values at that
+ * leaf (common for nullish/optional fields that roll different types per
+ * invocation), the *parent object merge* still succeeds — the divergent
+ * leaf picks the later option's value rather than discarding the entire
+ * later option. This preserves discriminator keys in the canonical
+ * `intersect([common, variant(...)])` pattern, which would otherwise drop
+ * the `type` field whenever the common base and the variant disagree on a
+ * shared nullish field.
+ *
+ * **Top-level incompatibility still warns.** Primitive intersects
+ * (`intersect([string, string])`) mock independently and have no shared
+ * structure to fall back on; when the two values disagree, the warning
+ * fires and the earlier value wins. This is unchanged.
  */
 export interface GenerateIntersectOptions {
   mockItem: (schema: v.GenericSchema | v.GenericSchemaAsync) => unknown;
@@ -53,12 +62,24 @@ interface MergeResult {
 }
 
 /**
- * Mirror of Valibot's internal `_merge` semantics for intersect:
+ * Mirror of Valibot's internal `_merge` semantics for intersect, with one
+ * deliberate divergence: object-level sub-merges that fail at a leaf
+ * recover by preferring `b`'s value at that key instead of aborting the
+ * parent merge.
+ *
  *   - equal primitives → first value
  *   - matching Date timestamps → first value
- *   - plain objects → recursive merge by key
- *   - arrays of equal length → positional recursive merge
- *   - everything else → issue (caller decides how to recover)
+ *   - plain objects → recursive merge by key; failed sub-merges prefer `b`
+ *   - arrays of equal length → positional recursive merge; failed sub-merges prefer `b`
+ *   - everything else (top-level primitives, type mismatches) → issue (caller decides)
+ *
+ * The "prefer `b`" recovery exists because Valimock mocks each option
+ * independently and can't satisfy an intersect's shared-key constraints
+ * at the value level — the only correct solution would be schema-level
+ * unification before any mocking. Preferring `b` (the later option) is a
+ * principled stopgap: later options are typically the constraint-adders
+ * (variants, extensions), so their values are more likely to satisfy the
+ * combined pipeline.
  */
 const deepMerge = (a: unknown, b: unknown): MergeResult => {
   if (typeof a !== typeof b) return { issue: true };
@@ -69,8 +90,10 @@ const deepMerge = (a: unknown, b: unknown): MergeResult => {
     for (const key in b as Record<string, unknown>) {
       if (key in (a as Record<string, unknown>)) {
         const sub = deepMerge((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]);
-        if (sub.issue) return sub;
-        out[key] = sub.value;
+        // Recover at the key level: a failed sub-merge picks b's value
+        // rather than discarding the whole parent object merge. See the
+        // "deliberate divergence" note above.
+        out[key] = sub.issue ? (b as Record<string, unknown>)[key] : sub.value;
       } else {
         out[key] = (b as Record<string, unknown>)[key];
       }
@@ -81,8 +104,8 @@ const deepMerge = (a: unknown, b: unknown): MergeResult => {
     const out: unknown[] = [...a];
     for (let i = 0; i < a.length; i++) {
       const sub = deepMerge(a[i], b[i]);
-      if (sub.issue) return sub;
-      out[i] = sub.value;
+      // Same key-level recovery as the object branch above.
+      out[i] = sub.issue ? b[i] : sub.value;
     }
     return { value: out };
   }

@@ -88,6 +88,54 @@ describe(`mockIntersect`, () => {
     });
   });
 
+  describe(`regressions`, () => {
+    it(`intersect of common-base + variant always preserves the discriminator`, () => {
+      // Regression: prior to the key-level recovery in deepMerge, this
+      // schema dropped the `type` discriminator in ~80% of iterations
+      // because the shared nullish-string `description` field would roll
+      // different types (null vs string) per option, causing the merge
+      // to discard option[1]'s entire contribution — including `type`.
+      const common = v.object({
+        id: v.string(),
+        description: v.nullish(v.string())
+      });
+      const variantA = v.object({
+        type: v.literal(`A`),
+        description: v.nullish(v.string()),
+        aOnly: v.string()
+      });
+      const variantB = v.object({
+        type: v.literal(`B`),
+        description: v.nullish(v.string()),
+        bOnly: v.string()
+      });
+      const schema = v.intersect([common, v.variant(`type`, [variantA, variantB])]);
+
+      for (let i = 0; i < 100; i++) {
+        const result = mockSchema(schema) as { type?: string };
+        expect(result.type === `A` || result.type === `B`).toBe(true);
+      }
+    });
+
+    it(`intersect of two objects sharing a divergent leaf still merges all keys`, () => {
+      // Variant-free analog of the regression above. Independent mocks of
+      // option[0] and option[1] can pick different values for the shared
+      // `shared` field; the merge must still return an object containing
+      // every key from both options, with the divergent leaf taking the
+      // later option's value.
+      const schema = v.intersect([
+        v.object({ a: v.string(), shared: v.nullish(v.string()) }),
+        v.object({ b: v.number(), shared: v.nullish(v.string()) })
+      ]);
+      for (let i = 0; i < 50; i++) {
+        const result = mockSchema(schema) as Record<string, unknown>;
+        expect(result).toHaveProperty(`a`);
+        expect(result).toHaveProperty(`b`);
+        expect(`shared` in result).toBe(true);
+      }
+    });
+  });
+
   describe(`edge cases`, () => {
     it(`intersect with overlapping primitive options warns about merge issue`, () => {
       // intersect([string, string]) — each option independently mocks a different
