@@ -2,6 +2,13 @@
 
 
 
+
+## 1.5.2
+<sub>2026-06-01</sub>
+
+- [#69](https://github.com/Saeris/valimock/pull/69)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Clean up package.json for ESM-only standards compliance: drop redundant `main`/`module`/`types` top-level fields and the non-standard `module` condition inside `exports`. The `exports.import` branch (with `types` listed first per Node's resolver requirement) is the canonical entrypoint for Node >=22 and modern bundlers, which is what this package already requires via `engines.node`. Normalizes `engines.node` from `">=22.x"` to the canonical semver `">=22"`; no behavior change (the two ranges are semver-equivalent), but the new form is idiomatic and what `node-semver` outputs after parsing.
+- [#70](https://github.com/Saeris/valimock/pull/70)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Fix intersect dropping variant discriminator when shared keys diverge, and let `customMocks` override built-in schema handlers (notably `customMocks.any: () => undefined` to restore pre-1.5 v.any behavior).
+
 ## 1.5.1
 <sub>2026-05-31</sub>
 
