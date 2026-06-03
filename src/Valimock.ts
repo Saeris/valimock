@@ -89,6 +89,39 @@ export interface ValimockOptions {
    * How many entries to create for Maps
    */
   mapEntriesLength: number;
+
+  /**
+   * When true, the Valimock instance tracks per-call counters exposed via
+   * `valimock.instrumentation`. The counters catch catastrophic performance
+   * regressions (e.g. the v1.5.0 eager-recursion bug, where wrapper handlers
+   * descended into every branch of a schema regardless of which branch the
+   * random roll picked, exploding `#mock` call counts by 100x+).
+   *
+   * Off by default — the instrumentation has a measurable hot-path cost
+   * (one branch + one increment per `#mock` call) that production users
+   * shouldn't pay. Enable in test suites that assert on call-count ceilings.
+   */
+  instrument: boolean;
+}
+
+/**
+ * Counters exposed by `valimock.instrumentation` when `options.instrument`
+ * is true. Reset via `valimock.resetInstrumentation()`.
+ */
+export interface ValimockInstrumentation {
+  /**
+   * Total `#mock` invocations since the last reset (or construction).
+   * A healthy `mock(complexSchema)` produces tens to low hundreds of calls;
+   * eager-recursion bugs produce thousands.
+   */
+  mockCalls: number;
+  /**
+   * Peak recursion depth reached during any single `#mock` chain since
+   * the last reset. Catches unbounded recursion that doesn't necessarily
+   * inflate `mockCalls` (e.g. a self-referencing schema that descends
+   * deep on one path before terminating).
+   */
+  maxDepth: number;
 }
 
 export class Valimock {
@@ -99,6 +132,7 @@ export class Valimock {
     stringMap: undefined,
     recordKeysLength: 1,
     mapEntriesLength: 1,
+    instrument: false,
     customMocks: {},
     onWarn: (message: string): void => console.warn(`[valimock] ${message}`),
     mockeryMapper: (keyName: string | undefined, fakerInstance: Faker): FakerFunction | undefined => {
@@ -127,11 +161,31 @@ export class Valimock {
   /** Set view of `options.customMocks` keys; refreshed when options change. */
   #customMockTypes!: Set<string>;
 
+  /** Active recursion depth in `#mock` — incremented on entry, decremented on exit. */
+  #depth = 0;
+  /** Backing storage for `instrumentation`. Only mutated when `options.instrument` is true. */
+  #instrumentation: ValimockInstrumentation = { mockCalls: 0, maxDepth: 0 };
+
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
     this.#schemaHandlers = new Map(Object.entries(this.#schemas));
     this.#customMockTypes = new Set(Object.keys(this.options.customMocks));
   }
+
+  /**
+   * Per-call counters tracked when `options.instrument` is true. Returns
+   * `undefined` when instrumentation is off so consumers don't accidentally
+   * read stale zeros and assume the suite is clean.
+   */
+  get instrumentation(): ValimockInstrumentation | undefined {
+    return this.options.instrument ? { ...this.#instrumentation } : undefined;
+  }
+
+  /** Reset instrumentation counters to zero. No-op when `instrument` is off. */
+  resetInstrumentation = (): void => {
+    this.#instrumentation.mockCalls = 0;
+    this.#instrumentation.maxDepth = 0;
+  };
 
   /**
    * Memoization cache for `#getValidEnumValues`. Enum objects are stable
@@ -162,6 +216,16 @@ export class Valimock {
   mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> => this.#mock(schema);
 
   #mock = <T extends Schema>(schema: T, keyName?: string): v.InferOutput<typeof schema> => {
+    // Instrumentation guard: a single branch + two increments when on,
+    // zero overhead when off. The guard sits ahead of the work so the
+    // catch block below doesn't need to know about it.
+    if (this.options.instrument) {
+      this.#instrumentation.mockCalls++;
+      this.#depth++;
+      if (this.#depth > this.#instrumentation.maxDepth) {
+        this.#instrumentation.maxDepth = this.#depth;
+      }
+    }
     try {
       if (this.options.seed) this.options.faker.seed(this.options.seed);
       // `customMocks` is consulted BEFORE every built-in path (including the
@@ -209,6 +273,11 @@ export class Valimock {
       }
 
       this.options.onWarn(`Mock generation failed for schema type \`${schema.type}\`: ${String(err)}`);
+    } finally {
+      // Always decrement so depth stays balanced across throws, returns, and
+      // the silent-undefined unknown-type path. The guard mirrors the entry
+      // increment so production paths stay zero-overhead.
+      if (this.options.instrument) this.#depth--;
     }
   };
 
