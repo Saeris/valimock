@@ -38,7 +38,9 @@
     "check": "vp check",
     "format": "vp check --fix",
     "test": "vp test --fileParallelism",
-    "typecheck": "vp typecheck"
+    "typecheck": "vp typecheck",
+    "bench": "vp test bench --run",
+    "profile": "node scripts/profile.mjs"
   },
   "dependencies": {
     "randexp": "^0.5.3"
