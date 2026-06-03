@@ -262,9 +262,20 @@ export class Valimock {
     return this.#mock(schema.wrapped);
   };
 
+  // Wrapper handlers (nullable / nullish / optional / undefinedable) must NOT
+  // eagerly evaluate `this.#mock(schema.wrapped)` before picking a branch.
+  // Array literals evaluate eagerly, so passing the wrapped mock into
+  // `arrayElement([this.#mock(...), null])` recurses into the entire wrapped
+  // schema tree on every call — catastrophic for self-referencing schemas
+  // wrapped in nullish (where each level of recursion descends through every
+  // nullish-lazy branch before the random roll discards most of them).
+  //
+  // The fix: roll the branch first, descend only when the wrapped branch is
+  // chosen. Sampling distributions are preserved.
+
   #mockNullable = (
     schema: v.NullableSchema<SyncSchema, SyncSchema> | v.NullableSchemaAsync<Schema, Schema>
-  ): v.InferOutput<typeof schema> => this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null]);
+  ): v.InferOutput<typeof schema> => (this.options.faker.datatype.boolean() ? this.#mock(schema.wrapped) : null);
 
   #mockNullish = (
     schema: v.NullishSchema<SyncSchema, SyncSchema> | v.NullishSchemaAsync<Schema, Schema>
@@ -272,10 +283,12 @@ export class Valimock {
     if (schema.default !== undefined) {
       return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
     }
-    return (
-      this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), null, undefined]) ??
-      this.options.faker.helpers.arrayElement([null, undefined])
-    );
+    // 1/3 each of wrapped / null / undefined. Faker's `arrayElement` over a
+    // 3-tuple of string tags is cheap (no schema evaluation, no allocation
+    // beyond the literal) and respects the seeded PRNG.
+    const branch = this.options.faker.helpers.arrayElement([`wrapped`, `null`, `undefined`] as const);
+    if (branch === `wrapped`) return this.#mock(schema.wrapped);
+    return branch === `null` ? null : undefined;
   };
 
   #mockNull = (schema: v.NullSchema<v.ErrorMessage<v.NullIssue> | undefined>): v.InferOutput<typeof schema> => null;
@@ -307,10 +320,10 @@ export class Valimock {
     if (schema.default !== undefined) {
       return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
     }
-    return this.options.faker.helpers.arrayElement([
-      this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped),
-      undefined
-    ]);
+    // Lazy coin-flip: see the wrapper-handlers note above #mockNullable.
+    return this.options.faker.datatype.boolean()
+      ? this.#mock<v.GenericSchema | v.GenericSchemaAsync>(schema.wrapped)
+      : undefined;
   };
 
   #mockRecord = <
@@ -458,7 +471,8 @@ export class Valimock {
     if (schema.default !== undefined) {
       return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
     }
-    return this.options.faker.helpers.arrayElement([this.#mock(schema.wrapped), undefined]);
+    // Lazy coin-flip: see the wrapper-handlers note above #mockNullable.
+    return this.options.faker.datatype.boolean() ? this.#mock(schema.wrapped) : undefined;
   };
 
   /**
