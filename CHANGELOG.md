@@ -4,6 +4,13 @@
 
 
 
+
+## 1.5.4
+<sub>2026-06-03</sub>
+
+- [#74](https://github.com/Saeris/valimock/pull/74)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Dispatch and lookup optimizations: Map-based schema dispatch in the hot #mock path, precomputed lowercase keyNameGenerators lookup, WeakMap memoization of #getValidEnumValues, and a fast path through generateString for unconstrained strings. ~1.2-1.7x faster on string- and enum-heavy schemas.
+- [#75](https://github.com/Saeris/valimock/pull/75)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Cache findFakerForKeyName auto-discovery results in a module-level WeakMap keyed by Faker instance. Both positive and negative results are cached, so repeat lookups of the same keyName (cached hit) and repeat lookups of unknown keyNames (cached miss) both skip the full Object.keys(faker) walk. ~1.8-2.1x faster on string-heavy schemas.
+
 ## 1.5.3
 <sub>2026-06-03</sub>
 
