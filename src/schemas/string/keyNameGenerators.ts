@@ -7,6 +7,10 @@ import type { StringContext } from "./types.js";
  * `firstName` generator regardless of validations.
  *
  * Keys are matched case-insensitively. Add a new entry to extend coverage.
+ *
+ * Consumers should prefer the precomputed `keyNameGeneratorsByLowercase` Map
+ * for lookups — the literal `keyNameGenerators` object exists for source
+ * readability and as the bootstrap input.
  */
 export const keyNameGenerators: Record<string, (ctx: StringContext) => string> = {
   default: (ctx) => ctx.faker.lorem.word(),
@@ -49,6 +53,15 @@ export const keyNameGenerators: Record<string, (ctx: StringContext) => string> =
   vin: (ctx) => ctx.faker.vehicle.vin(),
   vrm: (ctx) => ctx.faker.vehicle.vrm()
 };
+
+/**
+ * Precomputed `Map<lowercaseKey, generator>` derived from `keyNameGenerators`.
+ * Built once at module load so the per-mock keyName lookup is a single O(1)
+ * `Map.get` instead of `Object.keys(...).find((k) => k.toLowerCase() === ...)`.
+ */
+export const keyNameGeneratorsByLowercase: ReadonlyMap<string, (ctx: StringContext) => string> = new Map(
+  Object.entries(keyNameGenerators).map(([key, fn]) => [key.toLowerCase(), fn])
+);
 
 /** Type of the (deprecated) user-overridable Faker resolver. */
 export type MockeryMapper = (

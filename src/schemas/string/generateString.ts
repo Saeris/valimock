@@ -5,6 +5,27 @@ import type { MockeryMapper } from "./keyNameGenerators.js";
 import { collectConstraints, enforce, ENFORCE_RETRY_BUDGET, generate, satisfies } from "./phases.js";
 import { DEFAULT_MAX_LENGTH, type StringContext } from "./types.js";
 
+/**
+ * A context is "trivially satisfiable" when `generate()` alone is guaranteed
+ * to produce a value that passes `satisfies()` without needing to enforce or
+ * retry. Skipping the loop avoids a per-string `enforce()` + `satisfies()`
+ * round-trip — measurable on hot paths because plain `v.string()` is the
+ * most common string shape in real schemas.
+ */
+const isTriviallySatisfiable = (ctx: StringContext): boolean =>
+  !ctx.forceEmpty &&
+  !ctx.format &&
+  !ctx.regex &&
+  ctx.includes.length === 0 &&
+  ctx.excludes.length === 0 &&
+  ctx.startsWith === undefined &&
+  ctx.endsWith === undefined &&
+  ctx.forbiddenLengths.size === 0 &&
+  ctx.forbiddenValues.size === 0 &&
+  !ctx.wordCountSet &&
+  ctx.bounds.min === 0 &&
+  ctx.bounds.max >= DEFAULT_MAX_LENGTH;
+
 export interface GenerateStringOptions {
   faker: Faker;
   keyName?: string;
@@ -80,6 +101,15 @@ export const generateString = (schema: StringSchemaInput, options: GenerateStrin
     mockeryMapper: options.mockeryMapper,
     onDeprecatedMapper: options.onDeprecatedMapper
   };
+
+  // Fast path: when no constraints are present, faker's default output
+  // (lorem.word or a keyName generator) is always valid. Skip the retry
+  // loop entirely — `enforce` is a no-op without required substrings or
+  // tight bounds, and `satisfies` is trivially true.
+  if (!userOverride && isTriviallySatisfiable(ctx)) {
+    flushWarnings(ctx, options.onWarn);
+    return generate(ctx, extras);
+  }
 
   for (let attempt = 0; attempt < ENFORCE_RETRY_BUDGET; attempt++) {
     const candidate = userOverride ? userOverride() : generate(ctx, extras);
