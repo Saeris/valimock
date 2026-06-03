@@ -5,6 +5,13 @@
 
 
 
+
+## 1.6.0
+<sub>2026-06-03</sub>
+
+- [#77](https://github.com/Saeris/valimock/pull/77)  *(minor)* Thanks [@Saeris](https://github.com/Saeris)! - Add opt-in instrumentation hook (`new Valimock({ instrument: true })`) and a perf-regression spec asserting call-count and depth ceilings on realistic-shape schemas. Catches catastrophic regressions like the v1.5.0 wrapper-recursion bug — proven locally to detect the bug at ~2,100x explosion in call counts.
+- [#79](https://github.com/Saeris/valimock/pull/79)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Add Vitest `bench()` files for iteration-time performance evaluation, reusing the fixture library from the regression canary. Includes a `scripts/profile.mjs` convenience wrapper for CPU profiling. Pure tooling — no public-API or runtime changes.
+
 ## 1.5.4
 <sub>2026-06-03</sub>
 
