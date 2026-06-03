@@ -3,6 +3,12 @@
 
 
 
+
+## 1.5.3
+<sub>2026-06-03</sub>
+
+- [#72](https://github.com/Saeris/valimock/pull/72)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)! - Lazify wrapper handlers (nullable / nullish / optional / undefinedable) so they descend into the wrapped schema only when the random roll picks the wrapped branch. Eliminates a ~4,700x slowdown on self-referencing schemas wrapped in nullish-lazy (the canonical `referencedMessage: v.nullish(v.lazy(() => self))` pattern).
+
 ## 1.5.2
 <sub>2026-06-01</sub>
 
