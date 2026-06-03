@@ -93,3 +93,7 @@ cypress/e2e/build
 
 # Claude Code local agent state
 .claude/
+
+# CPU profiles emitted by scripts/profile.mjs
+profiles/
+*.cpuprofile
