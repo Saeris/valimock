@@ -56,29 +56,41 @@ export type MockeryMapper = (
   fakerInstance: Faker
 ) => ((...args: unknown[]) => Date | boolean | number | string) | undefined;
 
+type DiscoveredFn = () => Date | boolean | number | string;
+
 /**
- * Last-resort discovery: walk Faker's namespaces looking for a method whose
- * name (case- and separator-insensitive) matches the property name and that
- * returns a primitive when invoked with no args.
+ * Cache for `findFakerForKeyName`'s auto-discovery path. The discovery walk
+ * over every section + method of `faker` is expensive (the report measured
+ * it as 21.4% of CPU self-time on real schemas); without caching it ran
+ * fresh on every string field whose `keyName` didn't hit a direct
+ * `keyNameGenerators` entry.
  *
- * Honors a caller-provided `mockeryMapper` extension point first (deprecated).
+ * The cache is module-level and keyed by Faker instance via WeakMap so it
+ * (a) survives across `Valimock` instance constructions when callers share a
+ * faker (the common case in tests) and (b) becomes eligible for GC when the
+ * faker instance is unreachable.
  *
- * Returns a thunk so the discovery cost is only paid once per call.
+ * Values are `DiscoveredFn | null` so negative results are cached too — a
+ * keyName like `irrelevantSubfield` that doesn't resolve must not re-scan
+ * the entire faker tree on every subsequent string field with the same name.
+ *
+ * The deprecated `mockeryMapper` path bypasses the cache entirely: it emits
+ * a one-time deprecation warning that callers should see on every distinct
+ * invocation, and its output depends on the user-supplied mapper rather
+ * than a deterministic property of `faker`.
  */
-export const findFakerForKeyName = (
-  keyName: string,
-  faker: Faker,
-  mockeryMapper?: MockeryMapper,
-  onDeprecatedMapper?: () => void
-): (() => Date | boolean | number | string) | undefined => {
-  if (mockeryMapper) {
-    const mapped = mockeryMapper(keyName, faker);
-    if (mapped) {
-      onDeprecatedMapper?.();
-      return mapped as () => Date | boolean | number | string;
-    }
+const discoveryCache = new WeakMap<Faker, Map<string, DiscoveredFn | null>>();
+
+const getDiscoveryCache = (faker: Faker): Map<string, DiscoveredFn | null> => {
+  let cache = discoveryCache.get(faker);
+  if (!cache) {
+    cache = new Map();
+    discoveryCache.set(faker, cache);
   }
-  const lower = keyName.toLowerCase();
+  return cache;
+};
+
+const discover = (lower: string, faker: Faker): DiscoveredFn | undefined => {
   const compact = lower.replace(/_|-/g, ``);
   for (const sectionKey of Object.keys(faker) as Array<keyof Faker>) {
     const section = faker[sectionKey];
@@ -96,7 +108,7 @@ export const findFakerForKeyName = (
           typeof sample === `boolean` ||
           sample instanceof Date
         ) {
-          return fn as () => Date | boolean | number | string;
+          return fn as DiscoveredFn;
         }
       } catch {
         // fall through — this method needs args we don't have
@@ -104,4 +116,39 @@ export const findFakerForKeyName = (
     }
   }
   return undefined;
+};
+
+/**
+ * Last-resort discovery: walk Faker's namespaces looking for a method whose
+ * name (case- and separator-insensitive) matches the property name and that
+ * returns a primitive when invoked with no args.
+ *
+ * Honors a caller-provided `mockeryMapper` extension point first (deprecated).
+ *
+ * Returns a thunk so the discovery cost is only paid once per call.
+ */
+export const findFakerForKeyName = (
+  keyName: string,
+  faker: Faker,
+  mockeryMapper?: MockeryMapper,
+  onDeprecatedMapper?: () => void
+): DiscoveredFn | undefined => {
+  if (mockeryMapper) {
+    const mapped = mockeryMapper(keyName, faker);
+    if (mapped) {
+      onDeprecatedMapper?.();
+      return mapped as DiscoveredFn;
+    }
+  }
+  const lower = keyName.toLowerCase();
+  const cache = getDiscoveryCache(faker);
+  // Two-state cache: `null` means we've already scanned and found nothing;
+  // anything else is a cached fn. `Map.has()` distinguishes both from "not
+  // yet scanned" (key absent).
+  if (cache.has(lower)) {
+    return cache.get(lower) ?? undefined;
+  }
+  const discovered = discover(lower, faker);
+  cache.set(lower, discovered ?? null);
+  return discovered;
 };
