@@ -3,7 +3,7 @@ import { walkPipe } from "../../utils/walkPipe.js";
 import { unhandledValidation } from "../../utils/warnings.js";
 import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
-import { keyNameGenerators, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";
+import { keyNameGeneratorsByLowercase, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";
 import { DEFAULT_MAX_LENGTH, ENFORCE_RETRY_BUDGET, type Phase, type StringContext } from "./types.js";
 
 /** Extra context the `generate` phase needs but Context shouldn't expose to handlers. */
@@ -66,9 +66,8 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
   }
 
   if (ctx.keyName !== undefined) {
-    const lowerKey = ctx.keyName.toLowerCase();
-    const namedKey = Object.keys(keyNameGenerators).find((k) => k.toLowerCase() === lowerKey);
-    if (namedKey) return keyNameGenerators[namedKey](ctx);
+    const named = keyNameGeneratorsByLowercase.get(ctx.keyName.toLowerCase());
+    if (named) return named(ctx);
     const autoDiscovered = findFakerForKeyName(ctx.keyName, ctx.faker, extras.mockeryMapper, extras.onDeprecatedMapper);
     if (autoDiscovered) return String(autoDiscovered());
   }

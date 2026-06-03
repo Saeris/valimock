@@ -122,17 +122,42 @@ export class Valimock {
   /** Set once per instance the first time the deprecated `mockeryMapper` is invoked. */
   #mockeryMapperWarned = false;
 
+  /** Map view of `#schemas` for O(1) dispatch in the hot `#mock` path. */
+  #schemaHandlers!: Map<string, (schema: never) => unknown>;
+  /** Set view of `options.customMocks` keys; refreshed when options change. */
+  #customMockTypes!: Set<string>;
+
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
+    this.#schemaHandlers = new Map(Object.entries(this.#schemas));
+    this.#customMockTypes = new Set(Object.keys(this.options.customMocks));
   }
 
-  #getValidEnumValues = (obj: v.Enum): Array<number | string> =>
-    Object.values(
+  /**
+   * Memoization cache for `#getValidEnumValues`. Enum objects are stable
+   * references — schema definitions hold the same `MyEnum` object across
+   * every `#mockEnum` call, so the keys/values strip is computed once per
+   * distinct enum.
+   *
+   * A `WeakMap` lets GC reclaim entries when the enum object becomes
+   * unreachable (e.g. an enum declared inside a `describe` block goes out
+   * of scope when the block exits) — important so the cache doesn't grow
+   * unboundedly across long test runs.
+   */
+  #validEnumValuesCache = new WeakMap<v.Enum, Array<number | string>>();
+
+  #getValidEnumValues = (obj: v.Enum): Array<number | string> => {
+    const cached = this.#validEnumValuesCache.get(obj);
+    if (cached) return cached;
+    const computed = Object.values(
       Object.entries(obj).reduce(
         (hash, [key, value]) => (typeof obj[value] === `number` ? hash : Object.assign(hash, { [key]: value })),
         {}
       )
-    );
+    ) as Array<number | string>;
+    this.#validEnumValuesCache.set(obj, computed);
+    return computed;
+  };
 
   mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> => this.#mock(schema);
 
@@ -147,7 +172,11 @@ export class Valimock {
       // are expected to stay absent. Callers who register `customMocks.string`
       // forfeit keyName-based string routing inside their override — that's a
       // deliberate trade for full overridability.
-      if (Object.keys(this.options.customMocks).includes(schema.type)) {
+      // Hot-path dispatch: prefer the precomputed Map / Set lookups over
+      // `Object.keys(...).includes(...)`. `#mock` is the most-trafficked
+      // method in the library — on a 50-field self-referencing schema this
+      // can fire 5,000+ times per top-level `mock()` call.
+      if (this.#customMockTypes.has(schema.type)) {
         return this.options.customMocks[schema.type](schema, this.options);
       }
       if (
@@ -158,8 +187,9 @@ export class Valimock {
       ) {
         return this.#mockString(schema, keyName);
       }
-      if (Object.keys(this.#schemas).includes(schema.type)) {
-        return this.#schemas[schema.type](schema as never);
+      const handler = this.#schemaHandlers.get(schema.type);
+      if (handler) {
+        return handler(schema as never) as v.InferOutput<typeof schema>;
       }
       if (this.options.throwOnUnknownType) {
         throw new MockError(schema.type);
