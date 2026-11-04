@@ -12,14 +12,18 @@ describe(`mockObject`, () => {
         age: v.exactOptional(v.number())
       })
     )
-  ])(`should always include all keys by default (%#)`, { repeats: 10 }, (schema) => {
-    const result = mockSchema(schema);
-    expect(v.parse(schema, result)).toStrictEqual(result);
-    expect(v.parse(schema, result)).toHaveProperty(`name`);
-    expect(v.parse(schema, result).name).toBeTypeOf(`string`);
-    expect(v.parse(schema, result)).toHaveProperty(`age`);
-    expect(v.parse(schema, result).age).toBeTypeOf(`number`);
-  });
+  ])(
+    `should always include all keys by default (%#)`,
+    { repeats: 10 },
+    (schema) => {
+      const result = mockSchema(schema);
+      expect(v.parse(schema, result)).toStrictEqual(result);
+      expect(v.parse(schema, result)).toHaveProperty(`name`);
+      expect(v.parse(schema, result).name).toBeTypeOf(`string`);
+      expect(v.parse(schema, result)).toHaveProperty(`age`);
+      expect(v.parse(schema, result).age).toBeTypeOf(`number`);
+    }
+  );
 
   it.concurrent.each([
     v.required(
@@ -32,7 +36,10 @@ describe(`mockObject`, () => {
   ])(`should generate valid mock data (%#)`, { repeats: 10 }, (schema) => {
     const result = mockSchema(schema); //?
     expect(v.parse(schema, result)).toStrictEqual(result);
-    expect(v.parse(schema, result).name).toBeOneOf([expect.any(String), undefined]);
+    expect(v.parse(schema, result).name).toBeOneOf([
+      expect.any(String),
+      undefined
+    ]);
     expect(v.parse(schema, result)).toHaveProperty(`age`);
     expect(v.parse(schema, result).age).toBeTypeOf(`number`);
   });

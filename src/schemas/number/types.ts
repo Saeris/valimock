@@ -8,7 +8,9 @@ import type { SchemaMaybeWithPipe } from "../../types.js";
  * Bounds are managed by the shared `internal/bounds.ts` helpers.
  */
 export interface NumberContext {
-  readonly schema: SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>>;
+  readonly schema: SchemaMaybeWithPipe<
+    v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>
+  >;
   readonly faker: Faker;
 
   bounds: Bounds;
@@ -23,7 +25,10 @@ export interface NumberContext {
   warnings: string[];
 }
 
-export type NumberActionHandler = (ctx: NumberContext, action: v.GenericPipeItem | v.GenericPipeItemAsync) => void;
+export type NumberActionHandler = (
+  ctx: NumberContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+) => void;
 
 export const NUMBER_RETRY_BUDGET = 16;
 export const NUMBER_DEFAULTS = { min: 0, max: 5 };

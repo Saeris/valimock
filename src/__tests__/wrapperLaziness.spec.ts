@@ -122,7 +122,10 @@ describe(`wrapper handlers are lazy`, () => {
     // 1000ms+ per mock and occasional stack-overflow. Under the fix, each
     // level's recursion gates on a coin flip — so the tree terminates
     // probabilistically and total work stays bounded.
-    type Node = { id: string; child?: Node | null };
+    interface Node {
+      id: string;
+      child?: Node | null;
+    }
     const recursive: v.GenericSchema<Node> = v.object({
       id: v.string(),
       child: v.nullish(v.lazy(() => recursive))
@@ -134,7 +137,7 @@ describe(`wrapper handlers are lazy`, () => {
     // process either throws "Maximum call stack size exceeded" or
     // times out.
     for (let i = 0; i < 100; i++) {
-      const result = mock(recursive) as Node;
+      const result = mock(recursive);
       expect(typeof result.id).toBe(`string`);
     }
   });

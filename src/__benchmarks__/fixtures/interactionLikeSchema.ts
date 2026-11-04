@@ -10,29 +10,17 @@ import * as v from "valibot";
  *  - Nested optional/nullish wrappers around lazy refs
  */
 
-interface UserRef {
-  id: string;
-  username: string;
-  discriminator: string;
-}
-
-const userRefSchema: v.GenericSchema<UserRef> = v.object({
+const userRefSchema = v.object({
   id: v.string(),
   username: v.pipe(v.string(), v.minLength(2), v.maxLength(32)),
   discriminator: v.pipe(v.string(), v.digits(), v.length(4))
-}) as unknown as v.GenericSchema<UserRef>;
+});
 
-interface ChannelRef {
-  id: string;
-  name: string;
-  type: number;
-}
-
-const channelRefSchema: v.GenericSchema<ChannelRef> = v.object({
+const channelRefSchema = v.object({
   id: v.string(),
   name: v.string(),
   type: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(15))
-}) as unknown as v.GenericSchema<ChannelRef>;
+});
 
 export const interactionLikeSchema = v.object({
   id: v.string(),

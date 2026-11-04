@@ -14,7 +14,9 @@ export interface GenerateDateOptions {
   onWarn?: (message: string) => void;
 }
 
-export type DateSchemaInput = SchemaMaybeWithPipe<v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>>;
+export type DateSchemaInput = SchemaMaybeWithPipe<
+  v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>
+>;
 
 interface DateContext {
   exactValue: Date | undefined;
@@ -23,26 +25,45 @@ interface DateContext {
 }
 
 const handlers = {
-  value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  value: (
+    ctx: DateContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const d = readDate(action);
     if (d) ctx.exactValue = d;
   },
-  min_value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  min_value: (
+    ctx: DateContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const d = readDate(action);
     if (d) ctx.min = d;
   },
-  max_value: (ctx: DateContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  max_value: (
+    ctx: DateContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const d = readDate(action);
     if (d) ctx.max = d;
   }
 };
 
-export const generateDate = (schema: DateSchemaInput, options: GenerateDateOptions): Date => {
-  const ctx: DateContext = { exactValue: undefined, min: undefined, max: undefined };
-  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`date`, type)));
+export const generateDate = (
+  schema: DateSchemaInput,
+  options: GenerateDateOptions
+): Date => {
+  const ctx: DateContext = {
+    exactValue: undefined,
+    min: undefined,
+    max: undefined
+  };
+  walkPipe(schema, ctx, handlers, (type) =>
+    options.onWarn?.(unhandledValidation(`date`, type))
+  );
 
   if (ctx.exactValue) return ctx.exactValue;
-  if (ctx.min && ctx.max) return options.faker.date.between({ from: ctx.min, to: ctx.max });
+  if (ctx.min && ctx.max)
+    return options.faker.date.between({ from: ctx.min, to: ctx.max });
   if (ctx.min) return options.faker.date.soon({ refDate: ctx.min });
   if (ctx.max) return options.faker.date.recent({ refDate: ctx.max });
   return options.faker.date.soon();

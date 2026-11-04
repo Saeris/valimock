@@ -15,11 +15,11 @@ export interface GenerateRecordOptions {
 }
 
 export type RecordSchemaInput<
-  Key extends v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>> = v.BaseSchema<
+  Key extends v.BaseSchema<
     string,
     number | string | symbol,
     v.BaseIssue<unknown>
-  >,
+  > = v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>>,
   Value extends Schema = Schema
 > = Value extends v.GenericSchema
   ? v.RecordSchema<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
@@ -31,8 +31,19 @@ export const generateRecord = (
 ): Record<number | string | symbol, unknown> => {
   const result: Record<number | string | symbol, unknown> = {};
   for (let i = 0; i < options.entriesLength; i++) {
-    const key = options.mockItem(schema.key as v.GenericSchema) as number | string | symbol;
-    result[key] = options.mockItem(schema.value as v.GenericSchema | v.GenericSchemaAsync);
+    const key = options.mockItem(schema.key as v.GenericSchema);
+    // A record key schema mocks to a property key by definition; guard at
+    // runtime so the index access needs no assertion (and a misbehaving key
+    // schema is skipped rather than producing an invalid key).
+    if (
+      typeof key !== `number` &&
+      typeof key !== `string` &&
+      typeof key !== `symbol`
+    )
+      continue;
+    result[key] = options.mockItem(
+      schema.value as v.GenericSchema | v.GenericSchemaAsync
+    );
   }
   return result;
 };

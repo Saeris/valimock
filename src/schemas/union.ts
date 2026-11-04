@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { isObject } from "../utils/guards";
 
 /**
  * Generate a mock value for a Valibot union schema.
@@ -26,7 +27,10 @@ export interface GenerateUnionOptions {
 }
 
 export type UnionSchemaInput =
-  | v.UnionSchema<v.UnionOptions, v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined>
+  | v.UnionSchema<
+      v.UnionOptions,
+      v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
+    >
   | v.UnionSchemaAsync<
       v.UnionOptions | v.UnionOptionsAsync,
       v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
@@ -34,8 +38,13 @@ export type UnionSchemaInput =
 
 const UNION_RETRY_BUDGET = 8;
 
-export const generateUnion = (schema: UnionSchemaInput, options: GenerateUnionOptions): unknown => {
-  const opts = schema.options as ReadonlyArray<v.GenericSchema | v.GenericSchemaAsync>;
+export const generateUnion = (
+  schema: UnionSchemaInput,
+  options: GenerateUnionOptions
+): unknown => {
+  const opts = schema.options as ReadonlyArray<
+    v.GenericSchema | v.GenericSchemaAsync
+  >;
 
   // Track which options we've already tried so we can prefer un-tried ones on retry.
   const tried = new Set<number>();
@@ -44,7 +53,10 @@ export const generateUnion = (schema: UnionSchemaInput, options: GenerateUnionOp
   for (let attempt = 0; attempt < UNION_RETRY_BUDGET; attempt++) {
     // Prefer an untried option; if all have been tried, just pick randomly.
     const remaining = opts.filter((_, i) => !tried.has(i));
-    const chosen = remaining.length > 0 ? options.pickOption(remaining) : options.pickOption(opts);
+    const chosen =
+      remaining.length > 0
+        ? options.pickOption(remaining)
+        : options.pickOption(opts);
     tried.add(opts.indexOf(chosen));
 
     const result = options.mockItem(chosen);
@@ -53,7 +65,7 @@ export const generateUnion = (schema: UnionSchemaInput, options: GenerateUnionOp
     // Verify the round-trip: does parse(unionSchema, result) === result?
     // Only run for sync schemas — async parse would change the function shape.
     if (schema.async) return result;
-    const parsed = v.safeParse(schema as v.UnionSchema<v.UnionOptions, undefined>, result);
+    const parsed = v.safeParse(schema, result);
     if (parsed.success && structurallyEqual(parsed.output, result)) {
       return result;
     }
@@ -76,19 +88,21 @@ const structurallyEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   if (a === null || b === null) return a === b;
   if (typeof a !== typeof b) return false;
-  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  if (a instanceof Date && b instanceof Date)
+    return a.getTime() === b.getTime();
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (!structurallyEqual(a[i], b[i])) return false;
+    for (let i = 0; i < a.length; i++)
+      if (!structurallyEqual(a[i], b[i])) return false;
     return true;
   }
-  if (typeof a === `object` && typeof b === `object`) {
-    const aKeys = Object.keys(a as Record<string, unknown>);
-    const bKeys = Object.keys(b as Record<string, unknown>);
+  if (isObject(a) && isObject(b)) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) return false;
     for (const k of aKeys) {
-      if (!(k in (b as Record<string, unknown>))) return false;
-      if (!structurallyEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])) return false;
+      if (!(k in b)) return false;
+      if (!structurallyEqual(a[k], b[k])) return false;
     }
     return true;
   }

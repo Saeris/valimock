@@ -14,6 +14,7 @@ export const captureWarnings = (
   warnings: string[];
 } => {
   const warnings: string[] = [];
-  const mock = new Valimock({ ...options, onWarn: (msg) => warnings.push(msg) }).mock;
+  const mock = new Valimock({ ...options, onWarn: (msg) => warnings.push(msg) })
+    .mock;
   return { mock, warnings };
 };

@@ -34,14 +34,15 @@ describe(`mockEnum`, () => {
   }
 
   describe(`hand-written cases`, () => {
-    it.concurrent.each([v.enum(States), v.enum(Flags), v.enum(Features), v.enum(Status)])(
-      `should generate valid mock data (%#)`,
-      { repeats: 5 },
-      (schema) => {
-        const result = mockSchema(schema);
-        expect(v.parse(schema, result)).toStrictEqual(result);
-      }
-    );
+    it.concurrent.each([
+      v.enum(States),
+      v.enum(Flags),
+      v.enum(Features),
+      v.enum(Status)
+    ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
+      const result = mockSchema(schema);
+      expect(v.parse(schema, result)).toStrictEqual(result);
+    });
   });
 
   describe(`property-based`, () => {
@@ -72,12 +73,15 @@ describe(`mockEnum`, () => {
       [`string enum`, v.enum_(StringEnum), Object.values(StringEnum)],
       [`numeric enum`, v.enum_(NumericEnum), [0, 1, 2]],
       [`mixed enum`, v.enum_(MixedEnum), [`yes`, `no`, 42]]
-    ])(`%s: every mock value is a valid enum member and round-trips`, (_label, schema, validValues) => {
-      for (let i = 0; i < 50; i++) {
-        const result = mockSchema(schema);
-        expect(validValues).toContain(result);
-        expect(v.parse(schema, result)).toBe(result);
+    ])(
+      `%s: every mock value is a valid enum member and round-trips`,
+      (_label, schema, validValues) => {
+        for (let i = 0; i < 50; i++) {
+          const result = mockSchema(schema);
+          expect(validValues).toContain(result);
+          expect(v.parse(schema, result)).toBe(result);
+        }
       }
-    });
+    );
   });
 });

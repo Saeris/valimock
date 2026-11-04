@@ -38,6 +38,11 @@ interface Message {
   referencedMessage?: Message | null;
 }
 
+// Recursive schema: the `referencedMessage` self-reference needs the explicit
+// `Message` annotation to break circular inference, and valibot's structural
+// object output doesn't match the nominal interface, so the bridge cast is
+// unavoidable here.
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
 export const messageLikeSchema: v.GenericSchema<Message> = v.object({
   id: v.string(),
   channelId: v.string(),
@@ -62,8 +67,12 @@ export const messageLikeSchema: v.GenericSchema<Message> = v.object({
     v.object({
       title: v.nullish(v.string()),
       description: v.nullish(v.string()),
-      footer: v.nullish(v.object({ text: v.string(), iconUrl: v.nullish(v.string()) })),
-      author: v.nullish(v.object({ name: v.string(), url: v.nullish(v.string()) })),
+      footer: v.nullish(
+        v.object({ text: v.string(), iconUrl: v.nullish(v.string()) })
+      ),
+      author: v.nullish(
+        v.object({ name: v.string(), url: v.nullish(v.string()) })
+      ),
       fields: v.array(v.object({ name: v.string(), value: v.string() }))
     })
   ),

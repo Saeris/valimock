@@ -16,7 +16,12 @@ describe(`mockOmit`, () => {
             v.literal(`Seattle`),
             v.pipe(v.string(), v.minLength(2))
           ]),
-          postalCode: v.pipe(v.number(), v.maxValue(99999), v.integer(), v.minValue(0))
+          postalCode: v.pipe(
+            v.number(),
+            v.maxValue(99999),
+            v.integer(),
+            v.minValue(0)
+          )
         })
       }),
       [`address`]
@@ -38,14 +43,25 @@ describe(`mockOmit`, () => {
             v.literal(`Seattle`),
             v.pipeAsync(v.string(), v.minLength(2))
           ]),
-          postalCode: v.pipeAsync(v.number(), v.maxValue(99999), v.integer(), v.minValue(0))
+          postalCode: v.pipeAsync(
+            v.number(),
+            v.maxValue(99999),
+            v.integer(),
+            v.minValue(0)
+          )
         })
       }),
       [`address`]
     )
-  ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-    const result = mockSchema(schema);
-    await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    await expect(v.parseAsync(schema, result)).resolves.not.toHaveProperty(`address`);
-  });
+  ])(
+    `should generate valid mock data with async validation (%#)`,
+    { repeats: 5 },
+    async (schema) => {
+      const result = mockSchema(schema);
+      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
+      await expect(v.parseAsync(schema, result)).resolves.not.toHaveProperty(
+        `address`
+      );
+    }
+  );
 });

@@ -40,7 +40,9 @@ export const channelLikeSchema = v.intersect([
     }),
     v.object({
       type: v.literal(`forum`),
-      defaultReactionEmoji: v.nullish(v.object({ id: v.nullish(v.string()), name: v.nullish(v.string()) })),
+      defaultReactionEmoji: v.nullish(
+        v.object({ id: v.nullish(v.string()), name: v.nullish(v.string()) })
+      ),
       availableTags: v.array(
         v.object({
           id: v.string(),

@@ -19,10 +19,16 @@ describe(`mockBigint`, () => {
     it.concurrent.each([
       v.pipeAsync(v.bigint(), v.minValue(100n), v.maxValue(200n)),
       v.pipeAsync(v.bigint(), v.value(50n))
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
@@ -30,16 +36,37 @@ describe(`mockBigint`, () => {
 
     const bigintSchemaArb: fc.Arbitrary<v.GenericSchema<bigint>> = fc.oneof(
       fc.constant(v.bigint()),
-      fc.tuple(bigintArb, fc.bigInt({ min: 0n, max: 1_000_000n })).map(([lo, range]) => {
-        return v.pipe(v.bigint(), v.minValue(lo), v.maxValue(lo + range)) as unknown as v.GenericSchema<bigint>;
-      }),
-      fc.tuple(bigintArb, fc.bigInt({ min: 2n, max: 1_000_000n })).map(([lo, range]) => {
-        return v.pipe(v.bigint(), v.gtValue(lo), v.ltValue(lo + range)) as unknown as v.GenericSchema<bigint>;
-      }),
-      bigintArb.map((n) => v.pipe(v.bigint(), v.value(n)) as unknown as v.GenericSchema<bigint>),
+      fc
+        .tuple(bigintArb, fc.bigInt({ min: 0n, max: 1_000_000n }))
+        .map(([lo, range]) => {
+          return v.pipe(
+            v.bigint(),
+            v.minValue(lo),
+            v.maxValue(lo + range)
+          ) as unknown as v.GenericSchema<bigint>;
+        }),
+      fc
+        .tuple(bigintArb, fc.bigInt({ min: 2n, max: 1_000_000n }))
+        .map(([lo, range]) => {
+          return v.pipe(
+            v.bigint(),
+            v.gtValue(lo),
+            v.ltValue(lo + range)
+          ) as unknown as v.GenericSchema<bigint>;
+        }),
+      bigintArb.map(
+        (n) =>
+          v.pipe(v.bigint(), v.value(n)) as unknown as v.GenericSchema<bigint>
+      ),
       fc
         .array(bigintArb, { minLength: 1, maxLength: 5 })
-        .map((arr) => v.pipe(v.bigint(), v.values(arr)) as unknown as v.GenericSchema<bigint>)
+        .map(
+          (arr) =>
+            v.pipe(
+              v.bigint(),
+              v.values(arr)
+            ) as unknown as v.GenericSchema<bigint>
+        )
     );
 
     it(`every mock value round-trips through Valibot's parse`, () => {

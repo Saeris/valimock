@@ -22,24 +22,48 @@ describe(`mockDate`, () => {
     it.concurrent.each([
       v.pipeAsync(v.date(), v.minValue(requirement)),
       v.pipeAsync(v.date(), v.maxValue(requirement))
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
-    const dateArb = fc.date({ min: new Date(2000, 0, 1), max: new Date(2030, 0, 1), noInvalidDate: true });
+    const dateArb = fc.date({
+      min: new Date(2000, 0, 1),
+      max: new Date(2030, 0, 1),
+      noInvalidDate: true
+    });
 
     const dateSchemaArb: fc.Arbitrary<v.GenericSchema<Date>> = fc.oneof(
       fc.constant(v.date()),
-      fc.tuple(dateArb, fc.integer({ min: 0, max: 365 })).map(([from, days]) => {
-        const to = new Date(from.getTime() + days * 86400000);
-        return v.pipe(v.date(), v.minValue(from), v.maxValue(to)) as unknown as v.GenericSchema<Date>;
-      }),
-      dateArb.map((d) => v.pipe(v.date(), v.minValue(d)) as unknown as v.GenericSchema<Date>),
-      dateArb.map((d) => v.pipe(v.date(), v.maxValue(d)) as unknown as v.GenericSchema<Date>),
-      dateArb.map((d) => v.pipe(v.date(), v.value(d)) as unknown as v.GenericSchema<Date>)
+      fc
+        .tuple(dateArb, fc.integer({ min: 0, max: 365 }))
+        .map(([from, days]) => {
+          const to = new Date(from.getTime() + days * 86400000);
+          return v.pipe(
+            v.date(),
+            v.minValue(from),
+            v.maxValue(to)
+          ) as unknown as v.GenericSchema<Date>;
+        }),
+      dateArb.map(
+        (d) =>
+          v.pipe(v.date(), v.minValue(d)) as unknown as v.GenericSchema<Date>
+      ),
+      dateArb.map(
+        (d) =>
+          v.pipe(v.date(), v.maxValue(d)) as unknown as v.GenericSchema<Date>
+      ),
+      dateArb.map(
+        (d) => v.pipe(v.date(), v.value(d)) as unknown as v.GenericSchema<Date>
+      )
     );
 
     it(`every mock value round-trips through Valibot's parse`, () => {

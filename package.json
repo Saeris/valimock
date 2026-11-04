@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.4.0",
+    "@saeris/configs": "1.6.0",
     "@types/node": "25.8.0",
     "@varlock/bumpy": "^1.7.0",
     "@vitest/coverage-v8": "^4.1.6",

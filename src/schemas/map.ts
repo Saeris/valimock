@@ -23,7 +23,10 @@ export type MapSchemaInput =
 /** Cap on attempts to grow the result Map when duplicate keys collide. */
 const ADD_RETRY_BUDGET = 256;
 
-export const generateMap = (schema: MapSchemaInput, options: GenerateMapOptions): Map<unknown, unknown> => {
+export const generateMap = (
+  schema: MapSchemaInput,
+  options: GenerateMapOptions
+): Map<unknown, unknown> => {
   const result = new Map<unknown, unknown>();
   let attempts = 0;
   while (result.size < options.entriesLength && attempts < ADD_RETRY_BUDGET) {

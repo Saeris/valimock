@@ -40,7 +40,10 @@ export const tightenMax = (b: Bounds, value: number): void => {
  *   - only `max` was set below the default floor → narrow `min` to `max - 1`
  * When `integer` is requested, snap to the integer grid afterwards.
  */
-export const reconcileBounds = (b: Bounds, opts: { isInteger?: boolean } = {}): Bounds => {
+export const reconcileBounds = (
+  b: Bounds,
+  opts: { isInteger?: boolean } = {}
+): Bounds => {
   if (b.minSet && !b.maxSet && b.min >= b.max) b.max = b.min + 1;
   if (b.maxSet && !b.minSet && b.max <= b.min) b.min = b.max - 1;
   if (opts.isInteger) {
@@ -59,7 +62,11 @@ export const reconcileBounds = (b: Bounds, opts: { isInteger?: boolean } = {}): 
  * Nudges +1 then -1 to find a satisfying neighbour. If neither direction
  * works, returns the original pick (caller surfaces unsatisfiable cases).
  */
-export const pickAvoiding = (b: Bounds, forbidden: ReadonlySet<number>, seed: number | Faker | undefined): number => {
+export const pickAvoiding = (
+  b: Bounds,
+  forbidden: ReadonlySet<number>,
+  seed: number | Faker | undefined
+): number => {
   let target: number;
   if (typeof seed === `number`) target = seed;
   else if (seed === undefined) target = Math.floor((b.min + b.max) / 2);

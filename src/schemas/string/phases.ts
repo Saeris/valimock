@@ -1,13 +1,25 @@
 import RandExp from "randexp";
 import { walkPipe } from "../../utils/walkPipe.js";
 import { unhandledValidation } from "../../utils/warnings.js";
-import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
+import { actionHandlers } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
-import { keyNameGeneratorsByLowercase, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";
-import { DEFAULT_MAX_LENGTH, ENFORCE_RETRY_BUDGET, type Phase, type StringContext } from "./types.js";
+import {
+  keyNameGeneratorsByLowercase,
+  findFakerForKeyName,
+  type MockeryMapper
+} from "./keyNameGenerators.js";
+import {
+  type ActionHandler,
+  DEFAULT_MAX_LENGTH,
+  ENFORCE_RETRY_BUDGET,
+  type FormatGenerator,
+  type StringContext
+} from "./types.js";
 
 /** Extra context the `generate` phase needs but Context shouldn't expose to handlers. */
 export interface GenerateExtras {
+  /** Format generators to consult instead of the built-in registry. */
+  formatGenerators?: Record<string, FormatGenerator>;
   mockeryMapper?: MockeryMapper;
   onDeprecatedMapper?: () => void;
 }
@@ -16,10 +28,16 @@ export interface GenerateExtras {
  * Phase 1 — walk the schema's pipe and accumulate constraint state.
  * Each action's handler reads the action's `requirement` field and mutates
  * the Context. Unknown action types are recorded as warnings.
+ *
+ * `handlers` defaults to the built-in registry; `Valimock` passes a table
+ * with the user's `stringActions` merged over it.
  */
-export const collectConstraints: Phase = (ctx) => {
-  walkPipe(ctx.schema, ctx, actionHandlers, (type) => {
-    if (!knownActionTypes.has(type)) ctx.warnings.push(unhandledValidation(`string`, type));
+export const collectConstraints = (
+  ctx: StringContext,
+  handlers: Record<string, ActionHandler> = actionHandlers
+): undefined => {
+  walkPipe(ctx.schema, ctx, handlers, (type) => {
+    ctx.warnings.push(unhandledValidation(`string`, type));
   });
   return undefined;
 };
@@ -35,7 +53,10 @@ export const collectConstraints: Phase = (ctx) => {
  *   7. Faker key-name autodiscovery (consulting the deprecated mockeryMapper first if present)
  *   8. Default lorem word
  */
-export const generate = (ctx: StringContext, extras: GenerateExtras = {}): string => {
+export const generate = (
+  ctx: StringContext,
+  extras: GenerateExtras = {}
+): string => {
   if (ctx.forceEmpty) return ``;
 
   if (ctx.examples && ctx.examples.length > 0) {
@@ -54,13 +75,15 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
     return ctx.faker.lorem.words(count);
   }
 
-  if (ctx.format && ctx.format in formatGenerators) {
-    return formatGenerators[ctx.format](ctx);
+  const generators = extras.formatGenerators ?? formatGenerators;
+  if (ctx.format && ctx.format in generators) {
+    return generators[ctx.format](ctx);
   }
 
   if (ctx.regex) {
     const generator = new RandExp(ctx.regex);
-    generator.randInt = (min: number, max: number): number => ctx.faker.number.int({ min, max });
+    generator.randInt = (min: number, max: number): number =>
+      ctx.faker.number.int({ min, max });
     if (ctx.bounds.max < DEFAULT_MAX_LENGTH) generator.max = ctx.bounds.max;
     return generator.gen();
   }
@@ -68,7 +91,12 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
   if (ctx.keyName !== undefined) {
     const named = keyNameGeneratorsByLowercase.get(ctx.keyName.toLowerCase());
     if (named) return named(ctx);
-    const autoDiscovered = findFakerForKeyName(ctx.keyName, ctx.faker, extras.mockeryMapper, extras.onDeprecatedMapper);
+    const autoDiscovered = findFakerForKeyName(
+      ctx.keyName,
+      ctx.faker,
+      extras.mockeryMapper,
+      extras.onDeprecatedMapper
+    );
     if (autoDiscovered) return String(autoDiscovered());
   }
 
@@ -122,13 +150,16 @@ export const enforce = (value: string, ctx: StringContext): string => {
 
 /** True iff `value` satisfies every constraint encoded in `ctx`. */
 export const satisfies = (value: string, ctx: StringContext): boolean => {
-  if (value.length < ctx.bounds.min || value.length > ctx.bounds.max) return false;
+  if (value.length < ctx.bounds.min || value.length > ctx.bounds.max)
+    return false;
   if (ctx.forbiddenLengths.has(value.length)) return false;
   if (ctx.forbiddenValues.has(value)) return false;
   if (ctx.regex && !ctx.regex.test(value)) return false;
-  if (ctx.startsWith !== undefined && !value.startsWith(ctx.startsWith)) return false;
+  if (ctx.startsWith !== undefined && !value.startsWith(ctx.startsWith))
+    return false;
   if (ctx.endsWith !== undefined && !value.endsWith(ctx.endsWith)) return false;
-  for (const required of ctx.includes) if (!value.includes(required)) return false;
+  for (const required of ctx.includes)
+    if (!value.includes(required)) return false;
   for (const banned of ctx.excludes) if (value.includes(banned)) return false;
   if (ctx.wordCountSet) {
     const count = countWords(value);

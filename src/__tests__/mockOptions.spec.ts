@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { MockError, Valimock } from "../Valimock.js";
 import { captureWarnings } from "./helpers/captureWarnings.js";
 
-describe(`Valimock options`, () => {
+describe(`valimock options`, () => {
   describe(`seed`, () => {
     it(`same seed across instances produces the same value`, () => {
       // Determinism guarantee: callers can pin output by passing `seed`. Without
@@ -14,6 +14,20 @@ describe(`Valimock options`, () => {
       });
       const a = new Valimock({ onWarn: () => {}, seed: 42 }).mock(schema);
       const b = new Valimock({ onWarn: () => {}, seed: 42 }).mock(schema);
+      expect(a).toStrictEqual(b);
+    });
+
+    it(`seeds once per top-level call so sibling fields differ`, () => {
+      // Reseeding before every nested value would make two fields with the
+      // same schema identical in every mock, which defeats the purpose of a
+      // seeded but realistic fixture. Determinism across calls must survive.
+      const schema = v.object({
+        first: v.pipe(v.string(), v.uuid()),
+        second: v.pipe(v.string(), v.uuid())
+      });
+      const a = new Valimock({ onWarn: () => {}, seed: 7 }).mock(schema);
+      const b = new Valimock({ onWarn: () => {}, seed: 7 }).mock(schema);
+      expect(a.first).not.toBe(a.second);
       expect(a).toStrictEqual(b);
     });
 
@@ -32,8 +46,12 @@ describe(`Valimock options`, () => {
       // Construct a hand-rolled "schema" with a type Valimock doesn't register
       // and no customMocks entry. Default behavior is to warn + return undefined;
       // throwOnUnknownType: true must elevate that to a thrown MockError.
-      const fakeSchema = { kind: `schema`, type: `synthetic_unknown_type` } as never;
-      const m = new Valimock({ onWarn: () => {}, throwOnUnknownType: true }).mock;
+      const fakeSchema = {
+        kind: `schema`,
+        type: `synthetic_unknown_type`
+      } as never;
+      const m = new Valimock({ onWarn: () => {}, throwOnUnknownType: true })
+        .mock;
       expect(() => m(fakeSchema)).toThrow(MockError);
       expect(() => m(fakeSchema)).toThrow(/synthetic_unknown_type/);
     });
@@ -55,7 +73,9 @@ describe(`Valimock options`, () => {
       const schema = v.lazyAsync(async () => v.string());
       const result = mock(schema as never);
       expect(result).toBeUndefined();
-      expect(warnings.some((w) => w.includes(`lazy`) && w.includes(`Promise`))).toBe(true);
+      expect(
+        warnings.some((w) => w.includes(`lazy`) && w.includes(`Promise`))
+      ).toBe(true);
     });
 
     it(`lazyAsync with a sync getter still works`, () => {

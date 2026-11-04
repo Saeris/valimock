@@ -11,7 +11,9 @@ describe(`mockSet`, () => {
       const elementShapeArb = fc.constantFrom(v.string(), v.number());
       fc.assert(
         fc.property(elementShapeArb, (element) => {
-          const schema = v.set(element as v.GenericSchema) as unknown as v.GenericSchema;
+          const schema = v.set(
+            element as v.GenericSchema
+          ) as unknown as v.GenericSchema;
           const result = mock(schema) as Set<unknown>;
           expect(result).toBeInstanceOf(Set);
           expect(v.parse(schema, result)).toStrictEqual(result);
@@ -23,7 +25,10 @@ describe(`mockSet`, () => {
     it(`set with exact size: result has exactly that many elements`, () => {
       fc.assert(
         fc.property(fc.integer({ min: 1, max: 8 }), (n) => {
-          const schema = v.pipe(v.set(v.number()), v.size(n)) as unknown as v.GenericSchema;
+          const schema = v.pipe(
+            v.set(v.number()),
+            v.size(n)
+          ) as unknown as v.GenericSchema;
           const result = mock(schema) as Set<number>;
           expect(result.size).toBe(n);
           expect(v.parse(schema, result)).toStrictEqual(result);
@@ -34,12 +39,22 @@ describe(`mockSet`, () => {
 
     it(`set with min/max bounds: result size within bounds`, () => {
       fc.assert(
-        fc.property(fc.tuple(fc.integer({ min: 1, max: 5 }), fc.integer({ min: 0, max: 5 })), ([lo, range]) => {
-          const schema = v.pipe(v.set(v.number()), v.minSize(lo), v.maxSize(lo + range)) as unknown as v.GenericSchema;
-          const result = mock(schema) as Set<number>;
-          expect(result.size).toBeGreaterThanOrEqual(lo);
-          expect(result.size).toBeLessThanOrEqual(lo + range);
-        }),
+        fc.property(
+          fc.tuple(
+            fc.integer({ min: 1, max: 5 }),
+            fc.integer({ min: 0, max: 5 })
+          ),
+          ([lo, range]) => {
+            const schema = v.pipe(
+              v.set(v.number()),
+              v.minSize(lo),
+              v.maxSize(lo + range)
+            ) as unknown as v.GenericSchema;
+            const result = mock(schema) as Set<number>;
+            expect(result.size).toBeGreaterThanOrEqual(lo);
+            expect(result.size).toBeLessThanOrEqual(lo + range);
+          }
+        ),
         { numRuns: 50 }
       );
     });
