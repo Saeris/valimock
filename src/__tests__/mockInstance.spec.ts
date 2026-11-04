@@ -44,7 +44,9 @@ describe(`mockInstance`, () => {
       expect(result).toBeInstanceOf(RequiresArgsClass);
       // The warning records that we couldn't call the real constructor.
       expect(warnings.some((w) => w.includes(`RequiresArgsClass`))).toBe(true);
-      expect(warnings.some((w) => w.includes(`prototype-based placeholder`))).toBe(true);
+      expect(
+        warnings.some((w) => w.includes(`prototype-based placeholder`))
+      ).toBe(true);
     });
   });
 });

@@ -7,7 +7,9 @@ import type { SchemaMaybeWithPipe } from "../../types.js";
  * Phases read from and write to a single Context as the pipeline executes.
  */
 export interface StringContext {
-  readonly schema: SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>;
+  readonly schema: SchemaMaybeWithPipe<
+    v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+  >;
   readonly keyName: string | undefined;
   readonly faker: Faker;
 
@@ -52,7 +54,10 @@ export interface StringContext {
  * Handler invoked by the `collectConstraints` phase for a single pipe item.
  * Pure: mutates only the provided Context.
  */
-export type ActionHandler = (ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync) => void;
+export type ActionHandler = (
+  ctx: StringContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+) => void;
 
 /**
  * A phase is a single ordered pass over the Context. Returns the (possibly produced) value

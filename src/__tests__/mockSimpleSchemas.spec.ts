@@ -90,11 +90,14 @@ describe(`mockSimpleSchemas`, () => {
 
   it(`undefinedable: wraps inner schema, allows undefined`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
-        const schema = v.undefinedable(inner as v.GenericSchema);
-        const result = mock(schema);
-        expect(v.parse(schema, result)).toEqual(result);
-      }),
+      fc.property(
+        fc.constantFrom(v.string(), v.number(), v.boolean()),
+        (inner) => {
+          const schema = v.undefinedable(inner as v.GenericSchema);
+          const result = mock(schema);
+          expect(v.parse(schema, result)).toEqual(result);
+        }
+      ),
       { numRuns: 100 }
     );
   });
@@ -111,40 +114,52 @@ describe(`mockSimpleSchemas`, () => {
 
   it(`optional: wraps inner schema, allows undefined or missing`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
-        const schema = v.optional(inner as v.GenericSchema);
-        const result = mock(schema);
-        expect(v.parse(schema, result)).toEqual(result);
-      }),
+      fc.property(
+        fc.constantFrom(v.string(), v.number(), v.boolean()),
+        (inner) => {
+          const schema = v.optional(inner as v.GenericSchema);
+          const result = mock(schema);
+          expect(v.parse(schema, result)).toEqual(result);
+        }
+      ),
       { numRuns: 100 }
     );
   });
 
   it(`nullable: wraps inner schema, allows null`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
-        const schema = v.nullable(inner as v.GenericSchema);
-        const result = mock(schema);
-        expect(v.parse(schema, result)).toEqual(result);
-      }),
+      fc.property(
+        fc.constantFrom(v.string(), v.number(), v.boolean()),
+        (inner) => {
+          const schema = v.nullable(inner as v.GenericSchema);
+          const result = mock(schema);
+          expect(v.parse(schema, result)).toEqual(result);
+        }
+      ),
       { numRuns: 100 }
     );
   });
 
   it(`nullish: wraps inner schema, allows null or undefined`, () => {
     fc.assert(
-      fc.property(fc.constantFrom(v.string(), v.number(), v.boolean()), (inner) => {
-        const schema = v.nullish(inner as v.GenericSchema);
-        const result = mock(schema);
-        expect(v.parse(schema, result)).toEqual(result);
-      }),
+      fc.property(
+        fc.constantFrom(v.string(), v.number(), v.boolean()),
+        (inner) => {
+          const schema = v.nullish(inner as v.GenericSchema);
+          const result = mock(schema);
+          expect(v.parse(schema, result)).toEqual(result);
+        }
+      ),
       { numRuns: 100 }
     );
   });
 
   it(`lazy: recurses into getter`, () => {
     // Self-referential schema modelling a linked list of strings.
-    type Node = { value: string; next?: Node };
+    interface Node {
+      value: string;
+      next?: Node;
+    }
     const nodeSchema: v.GenericSchema<Node> = v.object({
       value: v.string(),
       next: v.optional(v.lazy(() => nodeSchema))

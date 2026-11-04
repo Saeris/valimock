@@ -9,20 +9,49 @@ export type GenericPipeAsync = [
 ];
 type GenericSchemaWithPipeAsync = v.SchemaWithPipeAsync<GenericPipeAsync>;
 export type SyncSchema = GenericSchemaWithPipe | v.GenericSchema;
-export type Schema = GenericSchemaWithPipe | GenericSchemaWithPipeAsync | v.GenericSchema | v.GenericSchemaAsync;
-export type SchemaMaybeWithPipe<TSchema extends v.GenericSchema | v.GenericSchemaAsync> = Optional<
+export type Schema =
+  | GenericSchemaWithPipe
+  | GenericSchemaWithPipeAsync
+  | v.GenericSchema
+  | v.GenericSchemaAsync;
+export type SchemaMaybeWithPipe<
+  TSchema extends v.GenericSchema | v.GenericSchemaAsync
+> = Optional<
   TSchema extends v.GenericSchema
     ? v.SchemaWithPipe<[TSchema, ...v.GenericPipeItem[]]>
-    : v.SchemaWithPipeAsync<[TSchema, ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>]>,
+    : v.SchemaWithPipeAsync<
+        [TSchema, ...Array<v.GenericPipeItem | v.GenericPipeItemAsync>]
+      >,
   `pipe`
 >;
-export type RequiredSchema<TSchema extends Schema | SyncSchema> = TSchema extends SyncSchema
-  ?
-      | v.NonNullableSchema<SyncSchema, v.ErrorMessage<v.NonNullableIssue> | undefined>
-      | v.NonNullishSchema<SyncSchema, v.ErrorMessage<v.NonNullishIssue> | undefined>
-      | v.NonOptionalSchema<SyncSchema, v.ErrorMessage<v.NonOptionalIssue> | undefined>
-  :
-      | v.NonNullableSchemaAsync<Schema, v.ErrorMessage<v.NonNullableIssue> | undefined>
-      | v.NonNullishSchemaAsync<Schema, v.ErrorMessage<v.NonNullishIssue> | undefined>
-      | v.NonOptionalSchemaAsync<Schema, v.ErrorMessage<v.NonOptionalIssue> | undefined>;
-export type MaybeRequiredSchema<TSchema extends Schema | SyncSchema> = TSchema | RequiredSchema<TSchema>;
+export type RequiredSchema<TSchema extends Schema | SyncSchema> =
+  TSchema extends SyncSchema
+    ?
+        | v.NonNullableSchema<
+            SyncSchema,
+            v.ErrorMessage<v.NonNullableIssue> | undefined
+          >
+        | v.NonNullishSchema<
+            SyncSchema,
+            v.ErrorMessage<v.NonNullishIssue> | undefined
+          >
+        | v.NonOptionalSchema<
+            SyncSchema,
+            v.ErrorMessage<v.NonOptionalIssue> | undefined
+          >
+    :
+        | v.NonNullableSchemaAsync<
+            Schema,
+            v.ErrorMessage<v.NonNullableIssue> | undefined
+          >
+        | v.NonNullishSchemaAsync<
+            Schema,
+            v.ErrorMessage<v.NonNullishIssue> | undefined
+          >
+        | v.NonOptionalSchemaAsync<
+            Schema,
+            v.ErrorMessage<v.NonOptionalIssue> | undefined
+          >;
+export type MaybeRequiredSchema<TSchema extends Schema | SyncSchema> =
+  | TSchema
+  | RequiredSchema<TSchema>;

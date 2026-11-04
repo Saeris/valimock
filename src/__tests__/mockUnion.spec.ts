@@ -5,7 +5,7 @@ import { Valimock } from "../Valimock.js";
 
 const mockSchema = new Valimock({ onWarn: () => {} }).mock;
 
-const unionSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
+const unionSchemaArb: fc.Arbitrary<v.GenericSchema> = fc
   .array(
     fc.oneof(
       fc.constant(v.string()),
@@ -16,25 +16,35 @@ const unionSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
     ),
     { minLength: 2, maxLength: 4 }
   )
-  .map((options) => v.union(options as never) as unknown as v.GenericSchema<unknown>);
+  .map((options) => v.union(options as never) as unknown as v.GenericSchema);
 
 describe(`mockUnion`, () => {
   describe(`hand-written cases`, () => {
-    it.concurrent.each([v.union([v.pipe(v.string(), v.url()), v.pipe(v.number(), v.maxValue(20), v.integer())])])(
-      `should generate valid mock data (%#)`,
-      { repeats: 5 },
-      (schema) => {
-        const result = mockSchema(schema);
-        expect(v.parse(schema, result)).toStrictEqual(result);
-      }
-    );
+    it.concurrent.each([
+      v.union([
+        v.pipe(v.string(), v.url()),
+        v.pipe(v.number(), v.maxValue(20), v.integer())
+      ])
+    ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
+      const result = mockSchema(schema);
+      expect(v.parse(schema, result)).toStrictEqual(result);
+    });
 
     it.concurrent.each([
-      v.unionAsync([v.pipe(v.string(), v.url()), v.pipeAsync(v.number(), v.maxValue(20), v.integer())])
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+      v.unionAsync([
+        v.pipe(v.string(), v.url()),
+        v.pipeAsync(v.number(), v.maxValue(20), v.integer())
+      ])
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
@@ -54,7 +64,7 @@ describe(`mockUnion`, () => {
         inner,
         v.boolean(),
         v.pipe(v.number(), v.maxValue(10))
-      ]) as unknown as v.GenericSchema<unknown>;
+      ]) as unknown as v.GenericSchema;
       fc.assert(
         fc.property(fc.constant(outer), (s) => {
           const result = mockSchema(s);
@@ -84,7 +94,10 @@ describe(`mockUnion`, () => {
     it(`onWarn fires for unions where no option survives the round-trip`, () => {
       // Option[0] strictly contains option[1]'s shape. The retry loop's
       // untried-option preference recovers without emitting the warning.
-      const schema = v.union([v.object({ kind: v.string() }), v.object({ kind: v.string(), more: v.number() })]);
+      const schema = v.union([
+        v.object({ kind: v.string() }),
+        v.object({ kind: v.string(), more: v.number() })
+      ]);
       const m = new Valimock({ onWarn: () => {} }).mock;
       for (let i = 0; i < 20; i++) {
         const result = m(schema);

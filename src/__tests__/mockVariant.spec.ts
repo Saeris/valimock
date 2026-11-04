@@ -56,7 +56,9 @@ const vehiclesSchema = v.intersect([
       })
     ]),
     v.object({
-      kind: v.exactOptional(v.picklist([`car`, `boat`, `motorcylce`, `airplane`]))
+      kind: v.exactOptional(
+        v.picklist([`car`, `boat`, `motorcylce`, `airplane`])
+      )
     })
   ])
 ]);
@@ -94,7 +96,7 @@ const nestedSchema = v.intersect([
   ])
 ]);
 
-const variantSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
+const variantSchemaArb: fc.Arbitrary<v.GenericSchema> = fc
   .array(
     fc
       .record({
@@ -115,10 +117,15 @@ const variantSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
   })
   .map((entries) => {
     const options = entries.map(({ tag, bodyShape }) => {
-      const body = bodyShape === `string` ? v.string() : bodyShape === `number` ? v.number() : v.boolean();
+      const body =
+        bodyShape === `string`
+          ? v.string()
+          : bodyShape === `number`
+            ? v.number()
+            : v.boolean();
       return v.object({ type: v.literal(tag), data: body });
     });
-    return v.variant(`type`, options as never) as unknown as v.GenericSchema<unknown>;
+    return v.variant(`type`, options as never) as unknown as v.GenericSchema;
   });
 
 describe(`mockVariant`, () => {

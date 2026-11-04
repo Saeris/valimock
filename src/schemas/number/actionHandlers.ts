@@ -14,7 +14,10 @@ export const numberActionHandlers: Record<string, NumberActionHandler> = {
     if (req !== undefined) ctx.exactValue = req;
   },
   values: (ctx, action) => {
-    const allowed = readArray(action, (x): x is number => typeof x === `number`);
+    const allowed = readArray(
+      action,
+      (x): x is number => typeof x === `number`
+    );
     if (allowed) ctx.allowedValues = allowed;
   },
   not_value: (ctx, action) => {
@@ -22,7 +25,10 @@ export const numberActionHandlers: Record<string, NumberActionHandler> = {
     if (req !== undefined) ctx.forbidden.add(req);
   },
   not_values: (ctx, action) => {
-    const allowed = readArray(action, (x): x is number => typeof x === `number`);
+    const allowed = readArray(
+      action,
+      (x): x is number => typeof x === `number`
+    );
     if (allowed) for (const v of allowed) ctx.forbidden.add(v);
   },
   min_value: (ctx, action) => {
@@ -56,7 +62,9 @@ export const numberActionHandlers: Record<string, NumberActionHandler> = {
   }
 };
 
-export const knownNumberActionTypes = new Set<string>(Object.keys(numberActionHandlers));
+export const knownNumberActionTypes = new Set<string>(
+  Object.keys(numberActionHandlers)
+);
 
 /** Reconcile bounds after collection — snap to integer grid when flagged. */
 export const resolveBounds = (ctx: NumberContext): void => {

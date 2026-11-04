@@ -33,13 +33,22 @@ console.log(`>> Bench filter: ${process.argv.slice(2).join(` `) || `(all)`}`);
 // not the vp wrapper.
 const vitestBin = join(repoRoot, `node_modules/vitest/dist/cli.js`);
 if (!existsSync(vitestBin)) {
-  console.error(`error: vitest CLI not found at ${vitestBin}. Run \`vp install\` first.`);
+  console.error(
+    `error: vitest CLI not found at ${vitestBin}. Run \`vp install\` first.`
+  );
   process.exit(1);
 }
 
 const result = spawnSync(
   process.execPath,
-  [`--cpu-prof`, `--cpu-prof-dir=${profilesDir}`, vitestBin, `bench`, `--run`, ...process.argv.slice(2)],
+  [
+    `--cpu-prof`,
+    `--cpu-prof-dir=${profilesDir}`,
+    vitestBin,
+    `bench`,
+    `--run`,
+    ...process.argv.slice(2)
+  ],
   { stdio: `inherit`, cwd: repoRoot }
 );
 
@@ -55,7 +64,9 @@ const cpuProfiles = readdirSync(profilesDir)
   .sort((a, b) => b.mtime - a.mtime);
 
 if (cpuProfiles.length === 0) {
-  console.warn(`>> No .cpuprofile files written — check that vitest actually ran.`);
+  console.warn(
+    `>> No .cpuprofile files written — check that vitest actually ran.`
+  );
   process.exit(1);
 }
 

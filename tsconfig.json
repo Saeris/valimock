@@ -1,25 +1,14 @@
 {
+  "extends": "@saeris/configs/tsconfig",
+  "include": ["./**/*.{j,t}s?(x)", "./**/*.spec.ts"],
+  "exclude": ["node_modules", ".yarn", ".claude", "**/dist/**"],
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2022"],
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "customConditions": ["development"],
+    "importHelpers": true,
     "types": ["node", "vitest/globals"]
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  }
 }

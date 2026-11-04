@@ -4,15 +4,25 @@ import { makeBounds } from "../../utils/bounds.js";
 import { walkPipe } from "../../utils/walkPipe.js";
 import { unhandledValidation } from "../../utils/warnings.js";
 import type { SchemaMaybeWithPipe } from "../../types.js";
-import { knownNumberActionTypes, numberActionHandlers, resolveBounds } from "./actionHandlers.js";
-import { NUMBER_DEFAULTS, NUMBER_RETRY_BUDGET, type NumberContext } from "./types.js";
+import {
+  knownNumberActionTypes,
+  numberActionHandlers,
+  resolveBounds
+} from "./actionHandlers.js";
+import {
+  NUMBER_DEFAULTS,
+  NUMBER_RETRY_BUDGET,
+  type NumberContext
+} from "./types.js";
 
 export interface GenerateNumberOptions {
   faker: Faker;
   onWarn?: (message: string) => void;
 }
 
-export type NumberSchemaInput = SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>>;
+export type NumberSchemaInput = SchemaMaybeWithPipe<
+  v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>
+>;
 
 /**
  * Generate a mock number for a Valibot number schema.
@@ -25,7 +35,10 @@ export type NumberSchemaInput = SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessag
  *   5. generate via faker.number.int/float, retrying past forbidden values
  *   6. fall through with a warning if no value satisfies the constraints
  */
-export const generateNumber = (schema: NumberSchemaInput, options: GenerateNumberOptions): number => {
+export const generateNumber = (
+  schema: NumberSchemaInput,
+  options: GenerateNumberOptions
+): number => {
   const ctx: NumberContext = {
     schema,
     faker: options.faker,
@@ -40,7 +53,8 @@ export const generateNumber = (schema: NumberSchemaInput, options: GenerateNumbe
   };
 
   walkPipe(schema, ctx, numberActionHandlers, (type) => {
-    if (!knownNumberActionTypes.has(type)) ctx.warnings.push(unhandledValidation(`number`, type));
+    if (!knownNumberActionTypes.has(type))
+      ctx.warnings.push(unhandledValidation(`number`, type));
   });
   resolveBounds(ctx);
 
@@ -59,7 +73,9 @@ export const generateNumber = (schema: NumberSchemaInput, options: GenerateNumbe
     const lo = Math.ceil(ctx.bounds.min / factor);
     const hi = Math.floor(ctx.bounds.max / factor);
     if (lo > hi) {
-      ctx.warnings.push(`multiple_of(${factor}) has no value in [${ctx.bounds.min}, ${ctx.bounds.max}]`);
+      ctx.warnings.push(
+        `multiple_of(${factor}) has no value in [${ctx.bounds.min}, ${ctx.bounds.max}]`
+      );
       flushWarnings(ctx, options.onWarn);
       return ctx.bounds.min;
     }
@@ -71,7 +87,9 @@ export const generateNumber = (schema: NumberSchemaInput, options: GenerateNumbe
         return candidate;
       }
     }
-    ctx.warnings.push(`Could not find a multiple_of(${factor}) value outside forbidden set within retry budget`);
+    ctx.warnings.push(
+      `Could not find a multiple_of(${factor}) value outside forbidden set within retry budget`
+    );
     flushWarnings(ctx, options.onWarn);
     return lo * factor;
   }
@@ -97,7 +115,10 @@ const pickValue = (ctx: NumberContext): number =>
     ? ctx.faker.number.int({ min: ctx.bounds.min, max: ctx.bounds.max })
     : ctx.faker.number.float({ min: ctx.bounds.min, max: ctx.bounds.max });
 
-const flushWarnings = (ctx: NumberContext, onWarn: ((m: string) => void) | undefined): void => {
+const flushWarnings = (
+  ctx: NumberContext,
+  onWarn: ((m: string) => void) | undefined
+): void => {
   if (!onWarn) return;
   for (const w of ctx.warnings) onWarn(w);
 };

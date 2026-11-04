@@ -5,7 +5,10 @@ const snowflake = v.pipe(v.string(), v.uuid());
 
 const userSchema = v.object({
   username: v.pipe(v.string(), v.minLength(1)),
-  discriminator: v.union([v.pipe(v.string(), v.digits(), v.length(4)), v.literal(`0`)]),
+  discriminator: v.union([
+    v.pipe(v.string(), v.digits(), v.length(4)),
+    v.literal(`0`)
+  ]),
   globalName: v.exactOptional(v.string()),
   avatar: v.exactOptional(v.pipe(v.string(), v.minLength(1))),
   bot: v.nullish(v.boolean()),
@@ -44,12 +47,22 @@ const guildSchema = v.object({
   vanityUrlCode: v.nullable(v.pipe(v.string(), v.nonEmpty())),
   description: v.nullable(v.string()),
   banner: v.nullable(v.pipe(v.string(), v.nonEmpty())),
-  premiumSubscriptionCount: v.exactOptional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  premiumSubscriptionCount: v.exactOptional(
+    v.pipe(v.number(), v.integer(), v.minValue(0))
+  ),
   publicUpdatesChannelId: v.nullable(snowflake),
-  maxVideoChannelUsers: v.exactOptional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-  maxStageVideoChannelUsers: v.exactOptional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-  approximateMemberCount: v.exactOptional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-  approximatePresenceCount: v.exactOptional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  maxVideoChannelUsers: v.exactOptional(
+    v.pipe(v.number(), v.integer(), v.minValue(0))
+  ),
+  maxStageVideoChannelUsers: v.exactOptional(
+    v.pipe(v.number(), v.integer(), v.minValue(0))
+  ),
+  approximateMemberCount: v.exactOptional(
+    v.pipe(v.number(), v.integer(), v.minValue(0))
+  ),
+  approximatePresenceCount: v.exactOptional(
+    v.pipe(v.number(), v.integer(), v.minValue(0))
+  ),
   premiumProgressBarEnabled: v.boolean(),
   safetyAlertsChannelId: v.nullable(snowflake)
 });
@@ -85,9 +98,21 @@ const applicationCommandSchema = v.intersect([
     applicationId: snowflake,
     guildId: v.exactOptional(snowflake),
     name: v.pipe(v.string(), v.minLength(1), v.maxLength(32)),
-    nameLocalizations: v.nullish(v.record(localesSchema, v.pipe(v.string(), v.minLength(1), v.maxLength(32)))),
-    description: v.exactOptional(v.pipe(v.string(), v.minLength(0), v.maxLength(100))),
-    descriptionLocalizations: v.nullish(v.record(localesSchema, v.pipe(v.string(), v.minLength(0), v.maxLength(100)))),
+    nameLocalizations: v.nullish(
+      v.record(
+        localesSchema,
+        v.pipe(v.string(), v.minLength(1), v.maxLength(32))
+      )
+    ),
+    description: v.exactOptional(
+      v.pipe(v.string(), v.minLength(0), v.maxLength(100))
+    ),
+    descriptionLocalizations: v.nullish(
+      v.record(
+        localesSchema,
+        v.pipe(v.string(), v.minLength(0), v.maxLength(100))
+      )
+    ),
     defaultMemberPermissions: v.nullable(v.string()),
     dmPermission: v.exactOptional(v.boolean()),
     defaultPermission: v.exactOptional(v.boolean()),
@@ -107,11 +132,21 @@ const applicationCommandSchema = v.intersect([
               v.object({
                 name: v.pipe(v.string(), v.minLength(1), v.maxLength(32)),
                 nameLocalizations: v.nullish(
-                  v.record(localesSchema, v.pipe(v.string(), v.minLength(1), v.maxLength(32)))
+                  v.record(
+                    localesSchema,
+                    v.pipe(v.string(), v.minLength(1), v.maxLength(32))
+                  )
                 ),
-                description: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
+                description: v.pipe(
+                  v.string(),
+                  v.minLength(1),
+                  v.maxLength(100)
+                ),
                 descriptionLocalizations: v.nullish(
-                  v.record(localesSchema, v.pipe(v.string(), v.minLength(1), v.maxLength(100)))
+                  v.record(
+                    localesSchema,
+                    v.pipe(v.string(), v.minLength(1), v.maxLength(100))
+                  )
                 ),
                 required: v.nullish(v.boolean(), false),
                 autocomplete: v.nullish(v.boolean())
@@ -131,12 +166,12 @@ const applicationCommandSchema = v.intersect([
 const mockSchema = new Valimock().mock;
 
 describe(`discordkit`, () => {
-  it.concurrent.each([userSchema, guildTemplateSchema, applicationCommandSchema])(
-    `should generate valid mock data`,
-    { repeats: 5 },
-    (schema) => {
-      const result = mockSchema(schema); //?
-      expect(v.parse(schema, result)).toStrictEqual(result);
-    }
-  );
+  it.concurrent.each([
+    userSchema,
+    guildTemplateSchema,
+    applicationCommandSchema
+  ])(`should generate valid mock data`, { repeats: 5 }, (schema) => {
+    const result = mockSchema(schema); //?
+    expect(v.parse(schema, result)).toStrictEqual(result);
+  });
 });

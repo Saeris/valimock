@@ -2,7 +2,10 @@ import { describe, expect, it } from "vite-plus/test";
 import * as v from "valibot";
 import { Valimock } from "../Valimock.js";
 
-const customSchema = v.custom((input) => typeof input === `string` && input === `custom`, `Invalid value!`);
+const customSchema = v.custom(
+  (input) => typeof input === `string` && input === `custom`,
+  `Invalid value!`
+);
 
 const mockSchema = new Valimock({
   customMocks: {
@@ -13,6 +16,8 @@ const mockSchema = new Valimock({
         // Return your mock data here
         return `custom`;
       }
+      // Returning undefined signals "no custom mock — use the built-in path".
+      return undefined;
     }
   }
 }).mock;

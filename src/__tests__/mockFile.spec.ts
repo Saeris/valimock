@@ -10,15 +10,39 @@ type FilePipeItem = v.PipeItem<File, File, v.BaseIssue<unknown>>;
 const fileSchemaArb: fc.Arbitrary<v.GenericSchema<File>> = fc.oneof(
   fc.constant(v.file()),
 
-  fc.tuple(fc.nat({ max: 256 }), fc.integer({ min: 1, max: 512 })).map(([lo, range]) => {
-    return v.pipe(v.file(), v.minSize(lo), v.maxSize(lo + range)) as unknown as v.GenericSchema<File>;
-  }),
-
-  fc.nat({ max: 256 }).map((n) => v.pipe(v.file(), v.size(n)) as unknown as v.GenericSchema<File>),
+  fc
+    .tuple(fc.nat({ max: 256 }), fc.integer({ min: 1, max: 512 }))
+    .map(([lo, range]) => {
+      return v.pipe(
+        v.file(),
+        v.minSize(lo),
+        v.maxSize(lo + range)
+      ) as unknown as v.GenericSchema<File>;
+    }),
 
   fc
-    .array(fc.constantFrom(`image/png`, `image/jpeg`, `application/pdf`, `text/plain`), { minLength: 1, maxLength: 3 })
-    .map((types) => v.pipe(v.file(), v.mimeType(types) as FilePipeItem) as unknown as v.GenericSchema<File>)
+    .nat({ max: 256 })
+    .map(
+      (n) => v.pipe(v.file(), v.size(n)) as unknown as v.GenericSchema<File>
+    ),
+
+  fc
+    .array(
+      fc.constantFrom(
+        `image/png`,
+        `image/jpeg`,
+        `application/pdf`,
+        `text/plain`
+      ),
+      { minLength: 1, maxLength: 3 }
+    )
+    .map(
+      (types) =>
+        v.pipe(
+          v.file(),
+          v.mimeType(types) as FilePipeItem
+        ) as unknown as v.GenericSchema<File>
+    )
 );
 
 describe(`mockFile`, () => {

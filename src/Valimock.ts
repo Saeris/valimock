@@ -18,7 +18,13 @@ import { generateString } from "./schemas/string/generateString.js";
 import { generateTuple } from "./schemas/tuple.js";
 import { generateUnion } from "./schemas/union.js";
 import { generateVariant } from "./schemas/variant.js";
-import type { Schema, SchemaMaybeWithPipe, SyncSchema, MaybeRequiredSchema, RequiredSchema } from "./types.js";
+import type {
+  Schema,
+  SchemaMaybeWithPipe,
+  SyncSchema,
+  MaybeRequiredSchema,
+  RequiredSchema
+} from "./types.js";
 
 export class MockError extends Error {
   constructor(public typeName?: string) {
@@ -26,9 +32,14 @@ export class MockError extends Error {
   }
 }
 
-export type FakerFunction = (...args: unknown[]) => Date | boolean | number | string;
+export type FakerFunction = (
+  ...args: unknown[]
+) => Date | boolean | number | string;
 
-export type MockeryMapper = (keyName: string, fakerInstance: Faker) => FakerFunction | undefined;
+export type MockeryMapper = (
+  keyName: string,
+  fakerInstance: Faker
+) => FakerFunction | undefined;
 
 export interface ValimockOptions {
   /**
@@ -78,7 +89,13 @@ export interface ValimockOptions {
    * The functions in this map will only be used if this library
    * is unable to find an appropriate mocking function to use.
    */
-  customMocks: Record<string, (schema: v.GenericSchema | v.GenericSchemaAsync, options?: ValimockOptions) => unknown>;
+  customMocks: Record<
+    string,
+    (
+      schema: v.GenericSchema | v.GenericSchemaAsync,
+      options?: ValimockOptions
+    ) => unknown
+  >;
 
   /**
    * How many entries to create for records
@@ -135,7 +152,10 @@ export class Valimock {
     instrument: false,
     customMocks: {},
     onWarn: (message: string): void => console.warn(`[valimock] ${message}`),
-    mockeryMapper: (keyName: string | undefined, fakerInstance: Faker): FakerFunction | undefined => {
+    mockeryMapper: (
+      keyName: string | undefined,
+      fakerInstance: Faker
+    ): FakerFunction | undefined => {
       const keyToFnMap: Record<string, FakerFunction> = {
         image: (): string => fakerInstance.image.url(),
         imageurl: (): string => fakerInstance.image.url(),
@@ -204,18 +224,25 @@ export class Valimock {
     const cached = this.#validEnumValuesCache.get(obj);
     if (cached) return cached;
     const computed = Object.values(
-      Object.entries(obj).reduce(
-        (hash, [key, value]) => (typeof obj[value] === `number` ? hash : Object.assign(hash, { [key]: value })),
+      Object.entries(obj).reduce<Record<string, number | string>>(
+        (hash, [key, value]) =>
+          typeof obj[value] === `number`
+            ? hash
+            : Object.assign(hash, { [key]: value }),
         {}
       )
-    ) as Array<number | string>;
+    );
     this.#validEnumValuesCache.set(obj, computed);
     return computed;
   };
 
-  mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> => this.#mock(schema);
+  mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> =>
+    this.#mock(schema);
 
-  #mock = <T extends Schema>(schema: T, keyName?: string): v.InferOutput<typeof schema> => {
+  #mock = <T extends Schema>(
+    schema: T,
+    keyName?: string
+  ): v.InferOutput<typeof schema> => {
     // Instrumentation guard: a single branch + two increments when on,
     // zero overhead when off. The guard sits ahead of the work so the
     // catch block below doesn't need to know about it.
@@ -244,15 +271,23 @@ export class Valimock {
         return this.options.customMocks[schema.type](schema, this.options);
       }
       if (
-        v.isOfType<`string`, Schema | SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>>(
+        v.isOfType<
           `string`,
-          schema
-        )
+          | Schema
+          | SchemaMaybeWithPipe<
+              v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+            >
+        >(`string`, schema)
       ) {
         return this.#mockString(schema, keyName);
       }
       const handler = this.#schemaHandlers.get(schema.type);
       if (handler) {
+        // The handler map is type-erased to `(schema: never) => unknown` so
+        // handlers with different concrete schema types share one value type;
+        // the dispatch boundary requires `as never` to satisfy that parameter,
+        // and the result is re-narrowed to the schema's inferred output.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         return handler(schema as never) as v.InferOutput<typeof schema>;
       }
       if (this.options.throwOnUnknownType) {
@@ -272,7 +307,9 @@ export class Valimock {
         throw err;
       }
 
-      this.options.onWarn(`Mock generation failed for schema type \`${schema.type}\`: ${String(err)}`);
+      this.options.onWarn(
+        `Mock generation failed for schema type \`${schema.type}\`: ${String(err)}`
+      );
     } finally {
       // Always decrement so depth stays balanced across throws, returns, and
       // the silent-undefined unknown-type path. The guard mirrors the entry
@@ -297,7 +334,9 @@ export class Valimock {
     }) as v.InferOutput<TSchema>;
 
   #mockBigint = (
-    schema: SchemaMaybeWithPipe<v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>>
+    schema: SchemaMaybeWithPipe<
+      v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>
+    >
   ): v.InferOutput<typeof schema> =>
     generateBigint(schema, {
       faker: this.options.faker,
@@ -305,11 +344,15 @@ export class Valimock {
     });
 
   #mockBoolean = (
-    schema: SchemaMaybeWithPipe<v.BooleanSchema<v.ErrorMessage<v.BooleanIssue> | undefined>>
+    schema: SchemaMaybeWithPipe<
+      v.BooleanSchema<v.ErrorMessage<v.BooleanIssue> | undefined>
+    >
   ): v.InferOutput<typeof schema> => this.options.faker.datatype.boolean();
 
   #mockDate = (
-    schema: SchemaMaybeWithPipe<v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>>
+    schema: SchemaMaybeWithPipe<
+      v.DateSchema<v.ErrorMessage<v.DateIssue> | undefined>
+    >
   ): v.InferOutput<typeof schema> =>
     generateDate(schema, {
       faker: this.options.faker,
@@ -317,24 +360,42 @@ export class Valimock {
     });
 
   #mockPicklist = (
-    schema: v.PicklistSchema<v.PicklistOptions, v.ErrorMessage<v.PicklistIssue> | undefined>
-  ): v.InferOutput<typeof schema> => this.options.faker.helpers.arrayElement(schema.options);
+    schema: v.PicklistSchema<
+      v.PicklistOptions,
+      v.ErrorMessage<v.PicklistIssue> | undefined
+    >
+  ): v.InferOutput<typeof schema> =>
+    this.options.faker.helpers.arrayElement(schema.options);
 
   #mockIntersect = (
-    schema: v.IntersectSchema<v.IntersectOptions, v.ErrorMessage<v.IntersectIssue> | undefined>
+    schema: v.IntersectSchema<
+      v.IntersectOptions,
+      v.ErrorMessage<v.IntersectIssue> | undefined
+    >
   ): v.InferOutput<typeof schema> =>
+    // `generateIntersect` returns `unknown` (it deep-merges arbitrary option
+    // outputs); its runtime result satisfies the schema's inferred output by
+    // construction, verified by the intersect round-trip tests.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     generateIntersect(schema, {
       mockItem: (item) => this.#mock(item),
       onWarn: this.options.onWarn
     }) as v.InferOutput<typeof schema>;
 
   #mockLiteral = (
-    schema: v.LiteralSchema<v.Literal, v.ErrorMessage<v.LiteralIssue> | undefined>
+    schema: v.LiteralSchema<
+      v.Literal,
+      v.ErrorMessage<v.LiteralIssue> | undefined
+    >
   ): v.InferOutput<typeof schema> => schema.literal;
 
   #mockMap = (
     schema:
-      | v.MapSchema<SyncSchema, SyncSchema, v.ErrorMessage<v.MapIssue> | undefined>
+      | v.MapSchema<
+          SyncSchema,
+          SyncSchema,
+          v.ErrorMessage<v.MapIssue> | undefined
+        >
       | v.MapSchemaAsync<Schema, Schema, v.ErrorMessage<v.MapIssue> | undefined>
   ): v.InferOutput<typeof schema> =>
     generateMap(schema, {
@@ -343,15 +404,23 @@ export class Valimock {
       onWarn: this.options.onWarn
     }) as v.InferOutput<typeof schema>;
 
-  #mockNaN = (schema: v.NanSchema<v.ErrorMessage<v.NanIssue> | undefined>): v.InferOutput<typeof schema> => NaN;
+  #mockNaN = (
+    schema: v.NanSchema<v.ErrorMessage<v.NanIssue> | undefined>
+  ): v.InferOutput<typeof schema> => NaN;
 
-  #mockEnum = (schema: v.EnumSchema<v.Enum, v.ErrorMessage<v.EnumIssue> | undefined>): v.InferOutput<typeof schema> =>
-    this.options.faker.helpers.arrayElement(this.#getValidEnumValues(schema.enum));
+  #mockEnum = (
+    schema: v.EnumSchema<v.Enum, v.ErrorMessage<v.EnumIssue> | undefined>
+  ): v.InferOutput<typeof schema> =>
+    this.options.faker.helpers.arrayElement(
+      this.#getValidEnumValues(schema.enum)
+    );
 
   #mockRequired = <TSchema extends MaybeRequiredSchema<Schema | SyncSchema>>(
     schema: RequiredSchema<TSchema>
   ): v.InferOutput<typeof schema> => {
-    const isNestedRequired = (val: Schema | SyncSchema): val is RequiredSchema<typeof val> =>
+    const isNestedRequired = (
+      val: Schema | SyncSchema
+    ): val is RequiredSchema<typeof val> =>
       Object.hasOwn(val, `expects`) &&
       ![`!null`, `(!null & !undefined)`, `!undefined`].includes(val.expects) &&
       Object.hasOwn(val, `wrapped`);
@@ -373,27 +442,46 @@ export class Valimock {
   // chosen. Sampling distributions are preserved.
 
   #mockNullable = (
-    schema: v.NullableSchema<SyncSchema, SyncSchema> | v.NullableSchemaAsync<Schema, Schema>
-  ): v.InferOutput<typeof schema> => (this.options.faker.datatype.boolean() ? this.#mock(schema.wrapped) : null);
+    schema:
+      | v.NullableSchema<SyncSchema, SyncSchema>
+      | v.NullableSchemaAsync<Schema, Schema>
+  ): v.InferOutput<typeof schema> =>
+    this.options.faker.datatype.boolean() ? this.#mock(schema.wrapped) : null;
 
   #mockNullish = (
-    schema: v.NullishSchema<SyncSchema, SyncSchema> | v.NullishSchemaAsync<Schema, Schema>
+    schema:
+      | v.NullishSchema<
+          SyncSchema,
+          v.Default<v.GenericSchema, null | undefined>
+        >
+      | v.NullishSchemaAsync<
+          Schema,
+          v.DefaultAsync<v.GenericSchemaAsync, null | undefined>
+        >
   ): v.InferOutput<typeof schema> => {
     if (schema.default !== undefined) {
-      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+      return v.getDefault(schema);
     }
     // 1/3 each of wrapped / null / undefined. Faker's `arrayElement` over a
     // 3-tuple of string tags is cheap (no schema evaluation, no allocation
     // beyond the literal) and respects the seeded PRNG.
-    const branch = this.options.faker.helpers.arrayElement([`wrapped`, `null`, `undefined`] as const);
+    const branch = this.options.faker.helpers.arrayElement([
+      `wrapped`,
+      `null`,
+      `undefined`
+    ] as const);
     if (branch === `wrapped`) return this.#mock(schema.wrapped);
     return branch === `null` ? null : undefined;
   };
 
-  #mockNull = (schema: v.NullSchema<v.ErrorMessage<v.NullIssue> | undefined>): v.InferOutput<typeof schema> => null;
+  #mockNull = (
+    schema: v.NullSchema<v.ErrorMessage<v.NullIssue> | undefined>
+  ): v.InferOutput<typeof schema> => null;
 
   #mockNumber = (
-    schema: SchemaMaybeWithPipe<v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>>
+    schema: SchemaMaybeWithPipe<
+      v.NumberSchema<v.ErrorMessage<v.NumberIssue> | undefined>
+    >
   ): v.InferOutput<typeof schema> =>
     generateNumber(schema, {
       faker: this.options.faker,
@@ -402,22 +490,33 @@ export class Valimock {
 
   #mockObject = (
     schema:
-      | v.ObjectSchema<v.ObjectEntries, v.ErrorMessage<v.ObjectIssue> | undefined>
-      | v.ObjectSchemaAsync<v.ObjectEntriesAsync, v.ErrorMessage<v.ObjectIssue> | undefined>
+      | v.ObjectSchema<
+          v.ObjectEntries,
+          v.ErrorMessage<v.ObjectIssue> | undefined
+        >
+      | v.ObjectSchemaAsync<
+          v.ObjectEntriesAsync,
+          v.ErrorMessage<v.ObjectIssue> | undefined
+        >
   ): v.InferOutput<typeof schema> =>
     generateObject(schema, {
       mockItem: (s, key) => this.#mock(s as Schema, key)
     }) as v.InferOutput<typeof schema>;
 
   #mockOptional = (
-    schema: v.OptionalSchema<SyncSchema, SyncSchema> | v.OptionalSchemaAsync<Schema, Schema>
+    schema:
+      | v.OptionalSchema<SyncSchema, v.Default<v.GenericSchema, undefined>>
+      | v.OptionalSchemaAsync<
+          Schema,
+          v.DefaultAsync<v.GenericSchemaAsync, undefined>
+        >
   ): v.InferOutput<typeof schema> => {
     // When the schema declares a default, honor it — `parse` will fill that
     // value in when the key is absent, so emitting it here keeps parse(mock)
     // structurally equal to mock(). `schema.default` may be a value or a
     // function (per Valibot's `getDefault` helper).
     if (schema.default !== undefined) {
-      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+      return v.getDefault(schema);
     }
     // Lazy coin-flip: see the wrapper-handlers note above #mockNullable.
     return this.options.faker.datatype.boolean()
@@ -426,17 +525,25 @@ export class Valimock {
   };
 
   #mockRecord = <
-    Key extends v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>> = v.BaseSchema<
+    Key extends v.BaseSchema<
       string,
       number | string | symbol,
       v.BaseIssue<unknown>
-    >,
+    > = v.BaseSchema<string, number | string | symbol, v.BaseIssue<unknown>>,
     Value extends Schema = Schema
   >(
     schema: Value extends v.GenericSchema
       ? v.RecordSchema<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
-      : v.RecordSchemaAsync<Key, Value, v.ErrorMessage<v.RecordIssue> | undefined>
+      : v.RecordSchemaAsync<
+          Key,
+          Value,
+          v.ErrorMessage<v.RecordIssue> | undefined
+        >
   ): v.InferOutput<typeof schema> =>
+    // `generateRecord` returns a plain `Record`; its runtime result satisfies
+    // the schema's inferred output by construction (keys and values are each
+    // mocked from the schema), verified by the record round-trip tests.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     generateRecord(schema, {
       entriesLength: this.options.recordKeysLength,
       mockItem: (item) => this.#mock(item)
@@ -449,7 +556,9 @@ export class Valimock {
    * in which case we can't mock synchronously and emit a warning.
    */
   #mockLazy = (
-    schema: v.LazySchema<v.GenericSchema> | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
+    schema:
+      | v.LazySchema<v.GenericSchema>
+      | v.LazySchemaAsync<v.GenericSchema | v.GenericSchemaAsync>
   ): v.InferOutput<typeof schema> => {
     const inner = schema.getter(undefined);
     if (inner instanceof Promise) {
@@ -477,13 +586,18 @@ export class Valimock {
     }) as v.InferOutput<TSchema>;
 
   #mockString = (
-    schema: SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>,
+    schema: SchemaMaybeWithPipe<
+      v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+    >,
     keyName?: string
   ): v.InferOutput<typeof schema> =>
     generateString(schema, {
       faker: this.options.faker,
       keyName,
       stringMap: this.options.stringMap,
+      // Deliberately consuming the deprecated `mockeryMapper` for backwards
+      // compatibility; `onDeprecatedMapper` below emits the one-time warning.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       mockeryMapper: this.options.mockeryMapper,
       onDeprecatedMapper: () => {
         if (this.#mockeryMapperWarned) return;
@@ -499,15 +613,21 @@ export class Valimock {
   #mockTuple = (
     schema:
       | v.TupleSchema<v.TupleItems, v.ErrorMessage<v.TupleIssue> | undefined>
-      | v.TupleSchemaAsync<v.TupleItemsAsync, v.ErrorMessage<v.TupleIssue> | undefined>
+      | v.TupleSchemaAsync<
+          v.TupleItemsAsync,
+          v.ErrorMessage<v.TupleIssue> | undefined
+        >
   ): v.InferOutput<typeof schema> =>
     generateTuple(schema, {
       mockItem: (item) => this.#mock(item)
-    }) as v.InferOutput<typeof schema>;
+    });
 
   #mockUnion = (
     schema:
-      | v.UnionSchema<v.UnionOptions, v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined>
+      | v.UnionSchema<
+          v.UnionOptions,
+          v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
+        >
       | v.UnionSchemaAsync<
           v.UnionOptions | v.UnionOptionsAsync,
           v.ErrorMessage<v.UnionIssue<v.BaseIssue<unknown>>> | undefined
@@ -517,19 +637,23 @@ export class Valimock {
       mockItem: (item) => this.#mock(item),
       pickOption: (opts) => this.options.faker.helpers.arrayElement(opts),
       onWarn: this.options.onWarn
-    }) as v.InferOutput<typeof schema>;
+    });
 
   #mockUndefined = (
     schema: v.UndefinedSchema<v.ErrorMessage<v.UndefinedIssue> | undefined>
   ): v.InferOutput<typeof schema> => undefined;
 
   #mockVariant = <Key extends string = string>(
-    schema: v.VariantSchema<Key, v.VariantOptions<Key>, v.ErrorMessage<v.VariantIssue> | undefined>
+    schema: v.VariantSchema<
+      Key,
+      v.VariantOptions<Key>,
+      v.ErrorMessage<v.VariantIssue> | undefined
+    >
   ): v.InferOutput<typeof schema> =>
     generateVariant(schema, {
       mockItem: (item) => this.#mock(item),
       pickOption: (opts) => this.options.faker.helpers.arrayElement(opts)
-    }) as v.InferOutput<typeof schema>;
+    });
 
   // ── Type-only schemas (no constraint surface beyond "is this type") ────
 
@@ -541,37 +665,59 @@ export class Valimock {
       null
     ]);
 
-  #mockUnknown = (_schema: v.UnknownSchema): unknown => this.#mockAny(_schema as unknown as v.AnySchema);
+  #mockUnknown = (_schema: v.UnknownSchema): unknown =>
+    // `unknown` and `any` schemas are mocked identically (both accept any
+    // value); reuse the `any` handler. The schemas are structurally unrelated
+    // so the bridge needs an explicit cast, but neither handler reads the
+    // schema, so the cast is inert at runtime.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    this.#mockAny(_schema as unknown as v.AnySchema);
 
-  #mockVoid = (_schema: v.VoidSchema<v.ErrorMessage<v.VoidIssue> | undefined>): undefined => undefined;
+  #mockVoid = (
+    _schema: v.VoidSchema<v.ErrorMessage<v.VoidIssue> | undefined>
+  ): undefined => undefined;
 
   /**
    * `never` is unsatisfiable by design — no value passes parse. Throw a
    * MockError so callers can detect schemas that are definitionally
    * un-mockable rather than silently emitting `undefined`.
    */
-  #mockNever = (_schema: v.NeverSchema<v.ErrorMessage<v.NeverIssue> | undefined>): never => {
+  #mockNever = (
+    _schema: v.NeverSchema<v.ErrorMessage<v.NeverIssue> | undefined>
+  ): never => {
     throw new MockError(`never`);
   };
 
   #mockFunction =
-    (_schema: v.FunctionSchema<v.ErrorMessage<v.FunctionIssue> | undefined>): ((...args: unknown[]) => unknown) =>
+    (
+      _schema: v.FunctionSchema<v.ErrorMessage<v.FunctionIssue> | undefined>
+    ): ((...args: unknown[]) => unknown) =>
     (..._args: unknown[]): unknown =>
       undefined;
 
-  #mockSymbol = (_schema: v.SymbolSchema<v.ErrorMessage<v.SymbolIssue> | undefined>): symbol => Symbol();
+  #mockSymbol = (
+    _schema: v.SymbolSchema<v.ErrorMessage<v.SymbolIssue> | undefined>
+  ): symbol => Symbol();
 
-  #mockPromise = (_schema: v.PromiseSchema<v.ErrorMessage<v.PromiseIssue> | undefined>): Promise<unknown> =>
-    Promise.resolve(undefined);
+  #mockPromise = async (
+    _schema: v.PromiseSchema<v.ErrorMessage<v.PromiseIssue> | undefined>
+  ): Promise<unknown> => Promise.resolve(undefined);
 
   #mockUndefinedable = (
-    schema: v.UndefinedableSchema<SyncSchema, SyncSchema> | v.UndefinedableSchemaAsync<Schema, Schema>
+    schema:
+      | v.UndefinedableSchema<SyncSchema, v.Default<v.GenericSchema, undefined>>
+      | v.UndefinedableSchemaAsync<
+          Schema,
+          v.DefaultAsync<v.GenericSchemaAsync, undefined>
+        >
   ): v.InferOutput<typeof schema> => {
     if (schema.default !== undefined) {
-      return v.getDefault(schema as never) as v.InferOutput<typeof schema>;
+      return v.getDefault(schema);
     }
     // Lazy coin-flip: see the wrapper-handlers note above #mockNullable.
-    return this.options.faker.datatype.boolean() ? this.#mock(schema.wrapped) : undefined;
+    return this.options.faker.datatype.boolean()
+      ? this.#mock(schema.wrapped)
+      : undefined;
   };
 
   /**
@@ -579,7 +725,12 @@ export class Valimock {
    * fitting mock when the class has a zero-arg constructor; otherwise we warn
    * and return a best-effort `Object.create(prototype)` instance.
    */
-  #mockInstance = (schema: v.InstanceSchema<v.Class, v.ErrorMessage<v.InstanceIssue> | undefined>): unknown => {
+  #mockInstance = (
+    schema: v.InstanceSchema<
+      v.Class,
+      v.ErrorMessage<v.InstanceIssue> | undefined
+    >
+  ): unknown => {
     try {
       return new (schema.class as new () => unknown)();
     } catch (err) {
@@ -595,15 +746,21 @@ export class Valimock {
    * not_size / mime_type. Returns a placeholder when the `Blob` global is
    * unavailable (Node < 18 without polyfills).
    */
-  #mockBlob = (schema: SchemaMaybeWithPipe<v.BlobSchema<v.ErrorMessage<v.BlobIssue> | undefined>>): unknown =>
-    generateBlob(schema, { onWarn: this.options.onWarn });
+  #mockBlob = (
+    schema: SchemaMaybeWithPipe<
+      v.BlobSchema<v.ErrorMessage<v.BlobIssue> | undefined>
+    >
+  ): unknown => generateBlob(schema, { onWarn: this.options.onWarn });
 
   /**
    * `file` schema with pipeline support. Same action set as `blob` since File
    * extends Blob. Returns a placeholder when the `File` global is unavailable.
    */
-  #mockFile = (schema: SchemaMaybeWithPipe<v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>>): unknown =>
-    generateFile(schema, { onWarn: this.options.onWarn });
+  #mockFile = (
+    schema: SchemaMaybeWithPipe<
+      v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>
+    >
+  ): unknown => generateFile(schema, { onWarn: this.options.onWarn });
 
   #schemas: Record<string, (schema: never) => unknown> = {
     any: this.#mockAny,

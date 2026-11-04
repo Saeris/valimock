@@ -68,7 +68,9 @@ const stringSchemaArb = fc
     formatKey: fc.option(fc.constantFrom(...formatKeys), { nil: undefined }),
     bounds: fc.option(
       fc.oneof(
-        fc.tuple(fc.nat({ max: 64 }), fc.constant(undefined)).map(([min]) => ({ kind: `min` as const, min })),
+        fc
+          .tuple(fc.nat({ max: 64 }), fc.constant(undefined))
+          .map(([min]) => ({ kind: `min` as const, min })),
         fc
           .tuple(fc.constant(undefined), fc.integer({ min: 1, max: 64 }))
           .map(([, max]) => ({ kind: `max` as const, max })),
@@ -87,10 +89,24 @@ const stringSchemaArb = fc
     if (formatKey === undefined || bounds === undefined) return true;
     const fmt = formats[formatKey];
     if (bounds.kind === `empty`) return false;
-    if (formatKey === `imei` && bounds.kind === `exact` && bounds.len !== 15 && bounds.len !== 18) return false;
-    if (formatKey === `bic` && bounds.kind === `exact` && bounds.len !== 8 && bounds.len !== 11) return false;
-    if (bounds.kind === `exact`) return bounds.len >= fmt.minLen && bounds.len <= fmt.maxLen;
-    if (bounds.kind === `range`) return bounds.min <= fmt.maxLen && bounds.max >= fmt.minLen;
+    if (
+      formatKey === `imei` &&
+      bounds.kind === `exact` &&
+      bounds.len !== 15 &&
+      bounds.len !== 18
+    )
+      return false;
+    if (
+      formatKey === `bic` &&
+      bounds.kind === `exact` &&
+      bounds.len !== 8 &&
+      bounds.len !== 11
+    )
+      return false;
+    if (bounds.kind === `exact`)
+      return bounds.len >= fmt.minLen && bounds.len <= fmt.maxLen;
+    if (bounds.kind === `range`)
+      return bounds.min <= fmt.maxLen && bounds.max >= fmt.minLen;
     if (bounds.kind === `max`) return bounds.max >= fmt.minLen;
     if (bounds.kind === `min`) return bounds.min <= fmt.maxLen;
     return true;
@@ -121,7 +137,9 @@ const stringSchemaArb = fc
       }
     }
     const schema: v.GenericSchema<string> =
-      items.length === 0 ? v.string() : (v.pipe(v.string(), ...items) as v.GenericSchema<string>);
+      items.length === 0
+        ? v.string()
+        : (v.pipe(v.string(), ...items) as v.GenericSchema<string>);
     return schema;
   });
 
@@ -208,10 +226,14 @@ describe(`mockString`, () => {
         vin: v.pipe(v.string(), v.nonEmpty()),
         vrm: v.pipe(v.string(), v.nonEmpty())
       })
-    ])(`should generate valid mock data based on object keys (%#)`, { repeats: 5 }, (schema) => {
-      const result = mockSchema(schema);
-      expect(v.parse(schema, result)).toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data based on object keys (%#)`,
+      { repeats: 5 },
+      (schema) => {
+        const result = mockSchema(schema);
+        expect(v.parse(schema, result)).toStrictEqual(result);
+      }
+    );
 
     it.concurrent.each([
       v.pipeAsync(v.string(), v.minLength(4)),
@@ -220,10 +242,16 @@ describe(`mockString`, () => {
       v.pipeAsync(v.string(), v.minLength(4)),
       v.pipeAsync(v.string(), v.maxLength(16)),
       v.pipeAsync(v.string(), v.length(4))
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
@@ -246,10 +274,14 @@ describe(`mockString`, () => {
           }),
           ({ startsW, endsW }) => {
             const items: StringPipeItem[] = [];
-            if (startsW !== null) items.push(v.startsWith(startsW) as StringPipeItem);
+            if (startsW !== null)
+              items.push(v.startsWith(startsW) as StringPipeItem);
             if (endsW !== null) items.push(v.endsWith(endsW) as StringPipeItem);
             if (items.length === 0) return;
-            const schema = v.pipe(v.string(), ...items) as v.GenericSchema<string>;
+            const schema = v.pipe(
+              v.string(),
+              ...items
+            ) as v.GenericSchema<string>;
             const value = mock(schema);
             expect(v.parse(schema, value)).toBe(value);
           }
@@ -279,7 +311,12 @@ describe(`mockString`, () => {
     });
 
     it(`startsWith + endsWith + maxLength: enforce truncates while preserving tail`, () => {
-      const schema = v.pipe(v.string(), v.startsWith(`a`), v.endsWith(`z`), v.maxLength(20));
+      const schema = v.pipe(
+        v.string(),
+        v.startsWith(`a`),
+        v.endsWith(`z`),
+        v.maxLength(20)
+      );
       for (let i = 0; i < 20; i++) {
         const result = mock(schema);
         expect(result.startsWith(`a`)).toBe(true);
@@ -300,7 +337,10 @@ describe(`mockString`, () => {
     });
 
     it(`excludes: result does not contain forbidden substrings (retry until satisfied)`, () => {
-      const schema = v.pipe(v.string(), v.excludes(`zzzzzz`)) as v.GenericSchema<string>;
+      const schema = v.pipe(
+        v.string(),
+        v.excludes(`zzzzzz`)
+      ) as v.GenericSchema<string>;
       for (let i = 0; i < 20; i++) {
         const result = mock(schema);
         expect(result).not.toContain(`zzzzzz`);
@@ -329,7 +369,11 @@ describe(`mockString`, () => {
     });
 
     it(`values + not_values: produces an allow-list entry not in the forbidden set`, () => {
-      const schema = v.pipe(v.string(), v.values([`good`, `bad`, `ugly`]), v.notValues([`bad`]));
+      const schema = v.pipe(
+        v.string(),
+        v.values([`good`, `bad`, `ugly`]),
+        v.notValues([`bad`])
+      );
       for (let i = 0; i < 30; i++) {
         const result = mock(schema);
         expect([`good`, `ugly`]).toContain(result);
@@ -338,7 +382,10 @@ describe(`mockString`, () => {
     });
 
     it(`not_value: never returns the forbidden string`, () => {
-      const schema = v.pipe(v.string(), v.notValue(`forbidden-exact-value-aaa`));
+      const schema = v.pipe(
+        v.string(),
+        v.notValue(`forbidden-exact-value-aaa`)
+      );
       for (let i = 0; i < 30; i++) {
         const result = mock(schema);
         expect(result).not.toBe(`forbidden-exact-value-aaa`);
@@ -348,7 +395,14 @@ describe(`mockString`, () => {
 
   describe(`edge cases — length constraints`, () => {
     it(`not_length: result length avoids the forbidden value`, () => {
-      const schema = v.pipe(v.string(), v.minLength(4), v.maxLength(8), v.notLength(5), v.notLength(6), v.notLength(7));
+      const schema = v.pipe(
+        v.string(),
+        v.minLength(4),
+        v.maxLength(8),
+        v.notLength(5),
+        v.notLength(6),
+        v.notLength(7)
+      );
       for (let i = 0; i < 30; i++) {
         const result = mock(schema);
         expect([4, 8]).toContain(result.length);
@@ -359,7 +413,7 @@ describe(`mockString`, () => {
 
   describe(`edge cases — stringMap override`, () => {
     it(`stringMap entry is invoked when keyName matches`, () => {
-      const customMock = vi.fn(() => `CUSTOM-VALUE`);
+      const customMock = vi.fn<() => string>(() => `CUSTOM-VALUE`);
       const mockWithMap = new Valimock({
         onWarn: () => {},
         stringMap: { customField: customMock }
@@ -368,7 +422,7 @@ describe(`mockString`, () => {
       const objSchema = v.object({ customField: v.string() });
       const result = mockWithMap(objSchema as never) as { customField: string };
       expect(result.customField).toBe(`CUSTOM-VALUE`);
-      expect(customMock).toHaveBeenCalled();
+      expect(customMock).toHaveBeenCalledWith();
     });
 
     it(`stringMap overrides format generators by key name`, () => {

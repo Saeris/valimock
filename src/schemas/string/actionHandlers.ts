@@ -1,5 +1,10 @@
 import type * as v from "valibot";
-import { readArray, readNumber, readRequirement, readString } from "../../utils/readRequirement.js";
+import {
+  readArray,
+  readNumber,
+  readRequirement,
+  readString
+} from "../../utils/readRequirement.js";
 import type { ActionHandler, StringContext } from "./types.js";
 
 /**
@@ -41,13 +46,19 @@ export const actionHandlers: Record<string, ActionHandler> = {
   min_words: (ctx, action) => {
     const n = readNumber(action);
     if (n === undefined) return;
-    ctx.wordBounds = { min: Math.max(ctx.wordBounds.min, n), max: Math.max(ctx.wordBounds.max, n) };
+    ctx.wordBounds = {
+      min: Math.max(ctx.wordBounds.min, n),
+      max: Math.max(ctx.wordBounds.max, n)
+    };
     ctx.wordCountSet = true;
   },
   max_words: (ctx, action) => {
     const n = readNumber(action);
     if (n === undefined) return;
-    ctx.wordBounds = { min: Math.min(ctx.wordBounds.min, n), max: Math.min(ctx.wordBounds.max, n) };
+    ctx.wordBounds = {
+      min: Math.min(ctx.wordBounds.min, n),
+      max: Math.min(ctx.wordBounds.max, n)
+    };
     ctx.wordCountSet = true;
   },
   not_words: (ctx, action) => {
@@ -67,7 +78,10 @@ export const actionHandlers: Record<string, ActionHandler> = {
     if (req !== undefined) ctx.exactValue = req;
   },
   values: (ctx, action) => {
-    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    const allowed = readArray(
+      action,
+      (x): x is string => typeof x === `string`
+    );
     if (allowed) ctx.allowedValues = allowed;
   },
   not_value: (ctx, action) => {
@@ -75,7 +89,10 @@ export const actionHandlers: Record<string, ActionHandler> = {
     if (req !== undefined) ctx.forbiddenValues.add(req);
   },
   not_values: (ctx, action) => {
-    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    const allowed = readArray(
+      action,
+      (x): x is string => typeof x === `string`
+    );
     if (allowed) for (const v of allowed) ctx.forbiddenValues.add(v);
   },
 
@@ -103,7 +120,10 @@ export const actionHandlers: Record<string, ActionHandler> = {
 
   // ── Metadata ──────────────────────────────────────────────────────────
   examples: (ctx, action) => {
-    const allowed = readArray(action, (x): x is string => typeof x === `string`);
+    const allowed = readArray(
+      action,
+      (x): x is string => typeof x === `string`
+    );
     if (allowed) ctx.examples = allowed;
   },
 
@@ -157,27 +177,39 @@ function setFormat(name: string): ActionHandler {
   };
 }
 
-function setLengthExact(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+function setLengthExact(
+  ctx: StringContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): void {
   const len = readNumber(action);
   if (len === undefined) return;
   ctx.bounds = { min: len, max: len };
 }
 
-function setLengthMin(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+function setLengthMin(
+  ctx: StringContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): void {
   const min = readNumber(action);
   if (min === undefined) return;
   ctx.bounds = { min: Math.max(ctx.bounds.min, min), max: ctx.bounds.max };
   if (ctx.bounds.max < ctx.bounds.min) ctx.bounds.max = ctx.bounds.min;
 }
 
-function setLengthMax(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+function setLengthMax(
+  ctx: StringContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): void {
   const max = readNumber(action);
   if (max === undefined) return;
   ctx.bounds = { min: ctx.bounds.min, max: Math.min(ctx.bounds.max, max) };
   if (ctx.bounds.min > ctx.bounds.max) ctx.bounds.min = ctx.bounds.max;
 }
 
-function addForbiddenLength(ctx: StringContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void {
+function addForbiddenLength(
+  ctx: StringContext,
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): void {
   const len = readNumber(action);
   if (len !== undefined) ctx.forbiddenLengths.add(len);
 }

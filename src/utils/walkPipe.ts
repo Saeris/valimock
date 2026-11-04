@@ -11,17 +11,19 @@ import type * as v from "valibot";
  * coming after `minLength`).
  */
 export const walkPipe = <Ctx>(
-  schema: { pipe?: readonly (v.GenericPipeItem | v.GenericPipeItemAsync)[] },
+  schema: { pipe?: ReadonlyArray<v.GenericPipeItem | v.GenericPipeItemAsync> },
   ctx: Ctx,
-  handlers: Record<string, (ctx: Ctx, action: v.GenericPipeItem | v.GenericPipeItemAsync) => void>,
+  handlers: Record<
+    string,
+    (ctx: Ctx, action: v.GenericPipeItem | v.GenericPipeItemAsync) => void
+  >,
   onUnknown?: (type: string) => void
 ): Ctx => {
   const pipe = schema.pipe ?? [];
   for (const action of pipe) {
     if (action.kind === `schema`) continue;
-    const handler = handlers[action.type];
-    if (handler) {
-      handler(ctx, action);
+    if (action.type in handlers) {
+      handlers[action.type](ctx, action);
     } else if (action.kind === `validation` && onUnknown) {
       onUnknown(action.type);
     }

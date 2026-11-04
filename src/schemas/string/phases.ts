@@ -3,8 +3,17 @@ import { walkPipe } from "../../utils/walkPipe.js";
 import { unhandledValidation } from "../../utils/warnings.js";
 import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
-import { keyNameGeneratorsByLowercase, findFakerForKeyName, type MockeryMapper } from "./keyNameGenerators.js";
-import { DEFAULT_MAX_LENGTH, ENFORCE_RETRY_BUDGET, type Phase, type StringContext } from "./types.js";
+import {
+  keyNameGeneratorsByLowercase,
+  findFakerForKeyName,
+  type MockeryMapper
+} from "./keyNameGenerators.js";
+import {
+  DEFAULT_MAX_LENGTH,
+  ENFORCE_RETRY_BUDGET,
+  type Phase,
+  type StringContext
+} from "./types.js";
 
 /** Extra context the `generate` phase needs but Context shouldn't expose to handlers. */
 export interface GenerateExtras {
@@ -19,7 +28,8 @@ export interface GenerateExtras {
  */
 export const collectConstraints: Phase = (ctx) => {
   walkPipe(ctx.schema, ctx, actionHandlers, (type) => {
-    if (!knownActionTypes.has(type)) ctx.warnings.push(unhandledValidation(`string`, type));
+    if (!knownActionTypes.has(type))
+      ctx.warnings.push(unhandledValidation(`string`, type));
   });
   return undefined;
 };
@@ -35,7 +45,10 @@ export const collectConstraints: Phase = (ctx) => {
  *   7. Faker key-name autodiscovery (consulting the deprecated mockeryMapper first if present)
  *   8. Default lorem word
  */
-export const generate = (ctx: StringContext, extras: GenerateExtras = {}): string => {
+export const generate = (
+  ctx: StringContext,
+  extras: GenerateExtras = {}
+): string => {
   if (ctx.forceEmpty) return ``;
 
   if (ctx.examples && ctx.examples.length > 0) {
@@ -60,7 +73,8 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
 
   if (ctx.regex) {
     const generator = new RandExp(ctx.regex);
-    generator.randInt = (min: number, max: number): number => ctx.faker.number.int({ min, max });
+    generator.randInt = (min: number, max: number): number =>
+      ctx.faker.number.int({ min, max });
     if (ctx.bounds.max < DEFAULT_MAX_LENGTH) generator.max = ctx.bounds.max;
     return generator.gen();
   }
@@ -68,7 +82,12 @@ export const generate = (ctx: StringContext, extras: GenerateExtras = {}): strin
   if (ctx.keyName !== undefined) {
     const named = keyNameGeneratorsByLowercase.get(ctx.keyName.toLowerCase());
     if (named) return named(ctx);
-    const autoDiscovered = findFakerForKeyName(ctx.keyName, ctx.faker, extras.mockeryMapper, extras.onDeprecatedMapper);
+    const autoDiscovered = findFakerForKeyName(
+      ctx.keyName,
+      ctx.faker,
+      extras.mockeryMapper,
+      extras.onDeprecatedMapper
+    );
     if (autoDiscovered) return String(autoDiscovered());
   }
 
@@ -122,13 +141,16 @@ export const enforce = (value: string, ctx: StringContext): string => {
 
 /** True iff `value` satisfies every constraint encoded in `ctx`. */
 export const satisfies = (value: string, ctx: StringContext): boolean => {
-  if (value.length < ctx.bounds.min || value.length > ctx.bounds.max) return false;
+  if (value.length < ctx.bounds.min || value.length > ctx.bounds.max)
+    return false;
   if (ctx.forbiddenLengths.has(value.length)) return false;
   if (ctx.forbiddenValues.has(value)) return false;
   if (ctx.regex && !ctx.regex.test(value)) return false;
-  if (ctx.startsWith !== undefined && !value.startsWith(ctx.startsWith)) return false;
+  if (ctx.startsWith !== undefined && !value.startsWith(ctx.startsWith))
+    return false;
   if (ctx.endsWith !== undefined && !value.endsWith(ctx.endsWith)) return false;
-  for (const required of ctx.includes) if (!value.includes(required)) return false;
+  for (const required of ctx.includes)
+    if (!value.includes(required)) return false;
   for (const banned of ctx.excludes) if (value.includes(banned)) return false;
   if (ctx.wordCountSet) {
     const count = countWords(value);

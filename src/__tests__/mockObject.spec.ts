@@ -17,7 +17,12 @@ describe(`mockObject`, () => {
             v.literal(`Seattle`),
             v.pipe(v.string(), v.minLength(2))
           ]),
-          postalCode: v.pipe(v.number(), v.maxValue(99999), v.integer(), v.minValue(0))
+          postalCode: v.pipe(
+            v.number(),
+            v.maxValue(99999),
+            v.integer(),
+            v.minValue(0)
+          )
         })
       })
     ])(`should generate valid mock data (%#)`, { repeats: 5 }, (schema) => {
@@ -35,13 +40,24 @@ describe(`mockObject`, () => {
             v.literal(`Seattle`),
             v.pipeAsync(v.string(), v.minLength(2))
           ]),
-          postalCode: v.pipeAsync(v.number(), v.maxValue(99999), v.integer(), v.minValue(0))
+          postalCode: v.pipeAsync(
+            v.number(),
+            v.maxValue(99999),
+            v.integer(),
+            v.minValue(0)
+          )
         })
       })
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
@@ -49,7 +65,9 @@ describe(`mockObject`, () => {
     const objectEntriesArb = fc
       .uniqueArray(
         fc.record({
-          key: fc.string({ minLength: 1, maxLength: 6 }).filter((s) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(s)),
+          key: fc
+            .string({ minLength: 1, maxLength: 6 })
+            .filter((s) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(s)),
           shape: fc.constantFrom(
             `string`,
             `number`,

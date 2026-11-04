@@ -1,4 +1,5 @@
 import type * as v from "valibot";
+import { isObject } from "../utils/guards";
 
 /**
  * Generate a mock value for a Valibot intersect schema. Intersect requires
@@ -33,11 +34,22 @@ export interface GenerateIntersectOptions {
 }
 
 export type IntersectSchemaInput =
-  | v.IntersectSchema<v.IntersectOptions, v.ErrorMessage<v.IntersectIssue> | undefined>
-  | v.IntersectSchemaAsync<v.IntersectOptionsAsync, v.ErrorMessage<v.IntersectIssue> | undefined>;
+  | v.IntersectSchema<
+      v.IntersectOptions,
+      v.ErrorMessage<v.IntersectIssue> | undefined
+    >
+  | v.IntersectSchemaAsync<
+      v.IntersectOptionsAsync,
+      v.ErrorMessage<v.IntersectIssue> | undefined
+    >;
 
-export const generateIntersect = (schema: IntersectSchemaInput, options: GenerateIntersectOptions): unknown => {
-  const opts = schema.options as ReadonlyArray<v.GenericSchema | v.GenericSchemaAsync>;
+export const generateIntersect = (
+  schema: IntersectSchemaInput,
+  options: GenerateIntersectOptions
+): unknown => {
+  const opts = schema.options as ReadonlyArray<
+    v.GenericSchema | v.GenericSchemaAsync
+  >;
   if (opts.length === 0) return {};
 
   let result = options.mockItem(opts[0]);
@@ -85,17 +97,17 @@ const deepMerge = (a: unknown, b: unknown): MergeResult => {
   if (typeof a !== typeof b) return { issue: true };
   if (a === b) return { value: a };
   if (a instanceof Date && b instanceof Date && +a === +b) return { value: a };
-  if (a && b && (a as object).constructor === Object && (b as object).constructor === Object) {
-    const out: Record<string, unknown> = { ...(a as Record<string, unknown>) };
-    for (const key in b as Record<string, unknown>) {
-      if (key in (a as Record<string, unknown>)) {
-        const sub = deepMerge((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]);
+  if (isObject(a) && isObject(b)) {
+    const out: Record<string, unknown> = { ...a };
+    for (const key in b) {
+      if (key in a) {
+        const sub = deepMerge(a[key], b[key]);
         // Recover at the key level: a failed sub-merge picks b's value
         // rather than discarding the whole parent object merge. See the
         // "deliberate divergence" note above.
-        out[key] = sub.issue ? (b as Record<string, unknown>)[key] : sub.value;
+        out[key] = sub.issue ? b[key] : sub.value;
       } else {
-        out[key] = (b as Record<string, unknown>)[key];
+        out[key] = b[key];
       }
     }
     return { value: out };

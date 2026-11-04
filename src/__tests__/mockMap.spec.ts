@@ -31,18 +31,31 @@ describe(`mockMap`, () => {
           city: v.pipeAsync(v.string(), v.minLength(2), v.maxLength(24))
         })
       )
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
     it(`map with string keys: every mock round-trips through parse`, () => {
-      const valueShapeArb = fc.constantFrom(v.string(), v.number(), v.boolean());
+      const valueShapeArb = fc.constantFrom(
+        v.string(),
+        v.number(),
+        v.boolean()
+      );
       fc.assert(
         fc.property(valueShapeArb, (valueSchema) => {
-          const schema = v.map(v.string(), valueSchema as v.GenericSchema) as unknown as v.GenericSchema;
+          const schema = v.map(
+            v.string(),
+            valueSchema as v.GenericSchema
+          ) as unknown as v.GenericSchema;
           const result = mockWith(2)(schema) as Map<unknown, unknown>;
           expect(result).toBeInstanceOf(Map);
           expect(v.parse(schema, result)).toStrictEqual(result);
@@ -52,7 +65,10 @@ describe(`mockMap`, () => {
     });
 
     it(`map honors mapEntriesLength when key schema produces unique values`, () => {
-      const schema = v.map(v.pipe(v.string(), v.uuid()), v.number()) as unknown as v.GenericSchema;
+      const schema = v.map(
+        v.pipe(v.string(), v.uuid()),
+        v.number()
+      ) as unknown as v.GenericSchema;
       for (const targetLen of [1, 3, 5]) {
         const result = mockWith(targetLen)(schema) as Map<string, number>;
         expect(result.size).toBe(targetLen);
@@ -62,7 +78,10 @@ describe(`mockMap`, () => {
     it(`map shrinks gracefully when key schema produces duplicates (picklist)`, () => {
       // picklist with 2 options + mapEntriesLength=5 → at most 2 distinct keys
       // before the retry budget exhausts.
-      const schema = v.map(v.picklist([`a`, `b`]), v.number()) as unknown as v.GenericSchema;
+      const schema = v.map(
+        v.picklist([`a`, `b`]),
+        v.number()
+      ) as unknown as v.GenericSchema;
       const { mock, warnings } = captureWarnings({ mapEntriesLength: 5 });
       const result = mock(schema) as Map<string, number>;
       expect(result.size).toBeGreaterThanOrEqual(1);
@@ -70,7 +89,11 @@ describe(`mockMap`, () => {
       for (const key of result.keys()) {
         expect([`a`, `b`]).toContain(key);
       }
-      expect(warnings.some((w) => w.includes(`Map generation could not reach target size`))).toBe(true);
+      expect(
+        warnings.some((w) =>
+          w.includes(`Map generation could not reach target size`)
+        )
+      ).toBe(true);
     });
   });
 });

@@ -2,7 +2,13 @@ import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
 import type { SchemaMaybeWithPipe } from "../../types.js";
 import type { MockeryMapper } from "./keyNameGenerators.js";
-import { collectConstraints, enforce, ENFORCE_RETRY_BUDGET, generate, satisfies } from "./phases.js";
+import {
+  collectConstraints,
+  enforce,
+  ENFORCE_RETRY_BUDGET,
+  generate,
+  satisfies
+} from "./phases.js";
 import { DEFAULT_MAX_LENGTH, type StringContext } from "./types.js";
 
 /**
@@ -51,9 +57,14 @@ export interface GenerateStringOptions {
  *      ENFORCE_RETRY_BUDGET times, then surface the failure as a warning
  *      and return the best-effort value (never recurses past budget)
  */
-export type StringSchemaInput = SchemaMaybeWithPipe<v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>>;
+export type StringSchemaInput = SchemaMaybeWithPipe<
+  v.StringSchema<v.ErrorMessage<v.StringIssue> | undefined>
+>;
 
-export const generateString = (schema: StringSchemaInput, options: GenerateStringOptions): string => {
+export const generateString = (
+  schema: StringSchemaInput,
+  options: GenerateStringOptions
+): string => {
   const ctx: StringContext = {
     schema,
     keyName: options.keyName,
@@ -87,15 +98,21 @@ export const generateString = (schema: StringSchemaInput, options: GenerateStrin
   // Allow-list: pick a value, falling back to a non-forbidden one if any of
   // the allowed values were ALSO marked forbidden.
   if (ctx.allowedValues && ctx.allowedValues.length > 0) {
-    const allowed = ctx.allowedValues.filter((v) => !ctx.forbiddenValues.has(v));
+    const allowed = ctx.allowedValues.filter(
+      (v) => !ctx.forbiddenValues.has(v)
+    );
     flushWarnings(ctx, options.onWarn);
-    return ctx.faker.helpers.arrayElement(allowed.length > 0 ? allowed : ctx.allowedValues);
+    return ctx.faker.helpers.arrayElement(
+      allowed.length > 0 ? allowed : ctx.allowedValues
+    );
   }
 
   // User-supplied stringMap takes precedence over internal generators, but
   // only when there's a keyName to look up.
   const userOverride =
-    options.keyName !== undefined && options.stringMap ? options.stringMap[options.keyName] : undefined;
+    options.keyName !== undefined && options.stringMap
+      ? options.stringMap[options.keyName]
+      : undefined;
 
   const extras = {
     mockeryMapper: options.mockeryMapper,
@@ -132,7 +149,10 @@ export const generateString = (schema: StringSchemaInput, options: GenerateStrin
   return enforce(generate(ctx, extras), ctx);
 };
 
-const flushWarnings = (ctx: StringContext, onWarn: ((m: string) => void) | undefined): void => {
+const flushWarnings = (
+  ctx: StringContext,
+  onWarn: ((m: string) => void) | undefined
+): void => {
   if (!onWarn) return;
   for (const w of ctx.warnings) onWarn(w);
 };

@@ -11,7 +11,15 @@ export interface GenerateTupleOptions {
 
 export type TupleSchemaInput =
   | v.TupleSchema<v.TupleItems, v.ErrorMessage<v.TupleIssue> | undefined>
-  | v.TupleSchemaAsync<v.TupleItemsAsync, v.ErrorMessage<v.TupleIssue> | undefined>;
+  | v.TupleSchemaAsync<
+      v.TupleItemsAsync,
+      v.ErrorMessage<v.TupleIssue> | undefined
+    >;
 
-export const generateTuple = (schema: TupleSchemaInput, options: GenerateTupleOptions): unknown[] =>
-  schema.items.map((item) => options.mockItem(item as v.GenericSchema | v.GenericSchemaAsync));
+export const generateTuple = (
+  schema: TupleSchemaInput,
+  options: GenerateTupleOptions
+): unknown[] =>
+  schema.items.map((item) =>
+    options.mockItem(item as v.GenericSchema | v.GenericSchemaAsync)
+  );

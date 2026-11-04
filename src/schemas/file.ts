@@ -1,5 +1,12 @@
 import type * as v from "valibot";
-import { makeBounds, pickAvoiding, reconcileBounds, tightenMax, tightenMin, type Bounds } from "../utils/bounds.js";
+import {
+  makeBounds,
+  pickAvoiding,
+  reconcileBounds,
+  tightenMax,
+  tightenMin,
+  type Bounds
+} from "../utils/bounds.js";
 import { readNumber, readRequirement } from "../utils/readRequirement.js";
 import { walkPipe } from "../utils/walkPipe.js";
 import { unhandledValidation } from "../utils/warnings.js";
@@ -13,7 +20,9 @@ export interface GenerateFileOptions {
   onWarn?: (message: string) => void;
 }
 
-export type FileSchemaInput = SchemaMaybeWithPipe<v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>>;
+export type FileSchemaInput = SchemaMaybeWithPipe<
+  v.FileSchema<v.ErrorMessage<v.FileIssue> | undefined>
+>;
 
 interface FileContext {
   bounds: Bounds;
@@ -25,23 +34,38 @@ interface FileContext {
 const DEFAULTS = { min: 0, max: 1024 };
 
 const handlers = {
-  size: (ctx: FileContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  size: (
+    ctx: FileContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) ctx.exactSize = n;
   },
-  min_size: (ctx: FileContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  min_size: (
+    ctx: FileContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMin(ctx.bounds, n);
   },
-  max_size: (ctx: FileContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  max_size: (
+    ctx: FileContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMax(ctx.bounds, n);
   },
-  not_size: (ctx: FileContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  not_size: (
+    ctx: FileContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) ctx.forbiddenSizes.add(n);
   },
-  mime_type: (ctx: FileContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  mime_type: (
+    ctx: FileContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const req = readRequirement(action);
     if (Array.isArray(req)) {
       const types = req.filter((v): v is string => typeof v === `string`);
@@ -50,7 +74,10 @@ const handlers = {
   }
 };
 
-export const generateFile = (schema: FileSchemaInput, options: GenerateFileOptions): unknown => {
+export const generateFile = (
+  schema: FileSchemaInput,
+  options: GenerateFileOptions
+): unknown => {
   if (typeof File === `undefined`) {
     options.onWarn?.(`file: no File global available in this environment`);
     return {};
@@ -63,10 +90,16 @@ export const generateFile = (schema: FileSchemaInput, options: GenerateFileOptio
     mimeTypes: undefined
   };
 
-  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`file`, type)));
+  walkPipe(schema, ctx, handlers, (type) =>
+    options.onWarn?.(unhandledValidation(`file`, type))
+  );
   reconcileBounds(ctx.bounds);
 
-  const targetSize = pickAvoiding(ctx.bounds, ctx.forbiddenSizes, ctx.exactSize);
+  const targetSize = pickAvoiding(
+    ctx.bounds,
+    ctx.forbiddenSizes,
+    ctx.exactSize
+  );
 
   const type = ctx.mimeTypes ? ctx.mimeTypes[0] : ``;
   const buf = new Uint8Array(targetSize);

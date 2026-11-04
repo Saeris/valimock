@@ -23,10 +23,16 @@ describe(`mockIntersect`, () => {
         v.object({ name: v.pipe(v.string(), v.minLength(2), v.maxLength(12)) }),
         v.objectAsync({ email: v.pipeAsync(v.string(), v.email()) })
       ])
-    ])(`should generate valid mock data with async validation (%#)`, { repeats: 5 }, async (schema) => {
-      const result = mockSchema(schema);
-      await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(result);
-    });
+    ])(
+      `should generate valid mock data with async validation (%#)`,
+      { repeats: 5 },
+      async (schema) => {
+        const result = mockSchema(schema);
+        await expect(v.parseAsync(schema, result)).resolves.toStrictEqual(
+          result
+        );
+      }
+    );
   });
 
   describe(`property-based`, () => {
@@ -39,11 +45,13 @@ describe(`mockIntersect`, () => {
      * structurally unsatisfiable, and matching-type primitive intersections
      * are equivalent to a single pipeline.
      */
-    const intersectSchemaArb: fc.Arbitrary<v.GenericSchema<unknown>> = fc
+    const intersectSchemaArb: fc.Arbitrary<v.GenericSchema> = fc
       .array(
         fc.array(
           fc.record({
-            key: fc.string({ minLength: 1, maxLength: 5 }).filter((k) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(k)),
+            key: fc
+              .string({ minLength: 1, maxLength: 5 })
+              .filter((k) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(k)),
             valueShape: fc.constantFrom(`string`, `number`, `boolean`)
           }),
           { minLength: 1, maxLength: 3 }
@@ -63,12 +71,17 @@ describe(`mockIntersect`, () => {
             for (const { key, valueShape } of entries) {
               if (usedKeys.has(key)) continue;
               usedKeys.add(key);
-              shape[key] = valueShape === `string` ? v.string() : valueShape === `number` ? v.number() : v.boolean();
+              shape[key] =
+                valueShape === `string`
+                  ? v.string()
+                  : valueShape === `number`
+                    ? v.number()
+                    : v.boolean();
             }
             return v.object(shape);
           })
           .filter((opt) => Object.keys(opt.entries).length > 0);
-        return v.intersect(options as never) as unknown as v.GenericSchema<unknown>;
+        return v.intersect(options as never) as unknown as v.GenericSchema;
       })
       .filter((schema) => {
         // After the disjoint-keys filter some options may have collapsed to
@@ -109,7 +122,10 @@ describe(`mockIntersect`, () => {
         description: v.nullish(v.string()),
         bOnly: v.string()
       });
-      const schema = v.intersect([common, v.variant(`type`, [variantA, variantB])]);
+      const schema = v.intersect([
+        common,
+        v.variant(`type`, [variantA, variantB])
+      ]);
 
       for (let i = 0; i < 100; i++) {
         const result = mockSchema(schema) as { type?: string };

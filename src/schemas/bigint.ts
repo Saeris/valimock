@@ -14,7 +14,9 @@ export interface GenerateBigintOptions {
   onWarn?: (message: string) => void;
 }
 
-export type BigintSchemaInput = SchemaMaybeWithPipe<v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>>;
+export type BigintSchemaInput = SchemaMaybeWithPipe<
+  v.BigintSchema<v.ErrorMessage<v.BigintIssue> | undefined>
+>;
 
 interface BigintContext {
   exactValue: bigint | undefined;
@@ -24,30 +26,53 @@ interface BigintContext {
 }
 
 const handlers = {
-  value: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  value: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const b = readBigint(action);
     if (b !== undefined) ctx.exactValue = b;
   },
-  values: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
-    const allowed = readArray(action, (x): x is bigint => typeof x === `bigint`);
+  values: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
+    const allowed = readArray(
+      action,
+      (x): x is bigint => typeof x === `bigint`
+    );
     if (allowed) ctx.allowedValues = allowed;
   },
-  min_value: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  min_value: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const b = readBigint(action);
-    if (b !== undefined) ctx.min = ctx.min === undefined ? b : ctx.min > b ? ctx.min : b;
+    if (b !== undefined)
+      ctx.min = ctx.min === undefined ? b : ctx.min > b ? ctx.min : b;
   },
-  max_value: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  max_value: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const b = readBigint(action);
-    if (b !== undefined) ctx.max = ctx.max === undefined ? b : ctx.max < b ? ctx.max : b;
+    if (b !== undefined)
+      ctx.max = ctx.max === undefined ? b : ctx.max < b ? ctx.max : b;
   },
-  gt_value: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  gt_value: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const b = readBigint(action);
     if (b !== undefined) {
       const next = b + 1n;
       ctx.min = ctx.min === undefined ? next : ctx.min > next ? ctx.min : next;
     }
   },
-  lt_value: (ctx: BigintContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  lt_value: (
+    ctx: BigintContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const b = readBigint(action);
     if (b !== undefined) {
       const next = b - 1n;
@@ -56,11 +81,22 @@ const handlers = {
   }
 };
 
-export const generateBigint = (schema: BigintSchemaInput, options: GenerateBigintOptions): bigint => {
-  const ctx: BigintContext = { exactValue: undefined, allowedValues: undefined, min: undefined, max: undefined };
-  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`bigint`, type)));
+export const generateBigint = (
+  schema: BigintSchemaInput,
+  options: GenerateBigintOptions
+): bigint => {
+  const ctx: BigintContext = {
+    exactValue: undefined,
+    allowedValues: undefined,
+    min: undefined,
+    max: undefined
+  };
+  walkPipe(schema, ctx, handlers, (type) =>
+    options.onWarn?.(unhandledValidation(`bigint`, type))
+  );
 
   if (ctx.exactValue !== undefined) return ctx.exactValue;
-  if (ctx.allowedValues && ctx.allowedValues.length > 0) return options.faker.helpers.arrayElement(ctx.allowedValues);
+  if (ctx.allowedValues && ctx.allowedValues.length > 0)
+    return options.faker.helpers.arrayElement(ctx.allowedValues);
   return options.faker.number.bigInt({ min: ctx.min, max: ctx.max });
 };

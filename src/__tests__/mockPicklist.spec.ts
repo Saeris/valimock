@@ -27,7 +27,7 @@ describe(`mockPicklist`, () => {
     it(`every literal returns the exact literal value`, () => {
       fc.assert(
         fc.property(literalValueArb, (value) => {
-          const schema = v.literal(value) as unknown as v.GenericSchema<unknown>;
+          const schema = v.literal(value) as unknown as v.GenericSchema;
           const result = mockSchema(schema);
           expect(result).toBe(value);
           expect(v.parse(schema, result)).toBe(value);
@@ -38,12 +38,17 @@ describe(`mockPicklist`, () => {
 
     it(`every mock value is drawn from the picklist options`, () => {
       fc.assert(
-        fc.property(fc.array(literalValueArb, { minLength: 1, maxLength: 6 }), (options) => {
-          const schema = v.picklist(options as never) as unknown as v.GenericSchema<unknown>;
-          const result = mockSchema(schema);
-          expect(options).toContain(result);
-          expect(v.parse(schema, result)).toBe(result);
-        }),
+        fc.property(
+          fc.array(literalValueArb, { minLength: 1, maxLength: 6 }),
+          (options) => {
+            const schema = v.picklist(
+              options as never
+            ) as unknown as v.GenericSchema;
+            const result = mockSchema(schema);
+            expect(options).toContain(result);
+            expect(v.parse(schema, result)).toBe(result);
+          }
+        ),
         { numRuns: 200 }
       );
     });

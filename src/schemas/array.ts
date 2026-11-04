@@ -1,6 +1,12 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import { makeBounds, reconcileBounds, tightenMax, tightenMin, type Bounds } from "../utils/bounds.js";
+import {
+  makeBounds,
+  reconcileBounds,
+  tightenMax,
+  tightenMin,
+  type Bounds
+} from "../utils/bounds.js";
 import { readNumber } from "../utils/readRequirement.js";
 import { walkPipe } from "../utils/walkPipe.js";
 import { unhandledValidation } from "../utils/warnings.js";
@@ -33,15 +39,24 @@ interface ArrayContext {
 const DEFAULTS = { min: 1, max: 5 };
 
 const handlers = {
-  length: (ctx: ArrayContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  length: (
+    ctx: ArrayContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) ctx.exactLength = n;
   },
-  min_length: (ctx: ArrayContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  min_length: (
+    ctx: ArrayContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMin(ctx.bounds, n);
   },
-  max_length: (ctx: ArrayContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  max_length: (
+    ctx: ArrayContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMax(ctx.bounds, n);
   },
@@ -53,22 +68,26 @@ const handlers = {
   }
 };
 
-export const generateArray = (schema: ArraySchemaInput, options: GenerateArrayOptions): unknown[] => {
+export const generateArray = (
+  schema: ArraySchemaInput,
+  options: GenerateArrayOptions
+): unknown[] => {
   const ctx: ArrayContext = {
     bounds: makeBounds(DEFAULTS),
     exactLength: undefined,
     forceEmpty: false
   };
 
-  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`array`, type)));
+  walkPipe(schema, ctx, handlers, (type) =>
+    options.onWarn?.(unhandledValidation(`array`, type))
+  );
 
   if (ctx.forceEmpty) return [];
   reconcileBounds(ctx.bounds);
 
   const length =
-    ctx.exactLength !== undefined
-      ? ctx.exactLength
-      : options.faker.number.int({ min: ctx.bounds.min, max: ctx.bounds.max });
+    ctx.exactLength ??
+    options.faker.number.int({ min: ctx.bounds.min, max: ctx.bounds.max });
 
   return Array.from({ length }, () => options.mockItem(schema.item));
 };

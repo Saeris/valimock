@@ -1,6 +1,13 @@
 import type { Faker } from "@faker-js/faker";
 import type * as v from "valibot";
-import { makeBounds, pickAvoiding, reconcileBounds, tightenMax, tightenMin, type Bounds } from "../utils/bounds.js";
+import {
+  makeBounds,
+  pickAvoiding,
+  reconcileBounds,
+  tightenMax,
+  tightenMin,
+  type Bounds
+} from "../utils/bounds.js";
 import { readNumber } from "../utils/readRequirement.js";
 import { walkPipe } from "../utils/walkPipe.js";
 import { unhandledValidation } from "../utils/warnings.js";
@@ -33,35 +40,56 @@ const DEFAULTS = { min: 1, max: 5 };
 const ADD_RETRY_BUDGET = 256;
 
 const handlers = {
-  size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  size: (
+    ctx: SetContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) ctx.exactSize = n;
   },
-  min_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  min_size: (
+    ctx: SetContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMin(ctx.bounds, n);
   },
-  max_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  max_size: (
+    ctx: SetContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) tightenMax(ctx.bounds, n);
   },
-  not_size: (ctx: SetContext, action: v.GenericPipeItem | v.GenericPipeItemAsync): void => {
+  not_size: (
+    ctx: SetContext,
+    action: v.GenericPipeItem | v.GenericPipeItemAsync
+  ): void => {
     const n = readNumber(action);
     if (n !== undefined) ctx.forbiddenSizes.add(n);
   }
 };
 
-export const generateSet = (schema: SetSchemaInput, options: GenerateSetOptions): Set<unknown> => {
+export const generateSet = (
+  schema: SetSchemaInput,
+  options: GenerateSetOptions
+): Set<unknown> => {
   const ctx: SetContext = {
     bounds: makeBounds(DEFAULTS),
     exactSize: undefined,
     forbiddenSizes: new Set()
   };
 
-  walkPipe(schema, ctx, handlers, (type) => options.onWarn?.(unhandledValidation(`set`, type)));
+  walkPipe(schema, ctx, handlers, (type) =>
+    options.onWarn?.(unhandledValidation(`set`, type))
+  );
   reconcileBounds(ctx.bounds);
 
-  const targetSize = pickAvoiding(ctx.bounds, ctx.forbiddenSizes, ctx.exactSize ?? options.faker);
+  const targetSize = pickAvoiding(
+    ctx.bounds,
+    ctx.forbiddenSizes,
+    ctx.exactSize ?? options.faker
+  );
 
   const result = new Set<unknown>();
   let attempts = 0;

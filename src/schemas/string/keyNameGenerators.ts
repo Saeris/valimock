@@ -12,54 +12,58 @@ import type { StringContext } from "./types.js";
  * for lookups — the literal `keyNameGenerators` object exists for source
  * readability and as the bootstrap input.
  */
-export const keyNameGenerators: Record<string, (ctx: StringContext) => string> = {
-  default: (ctx) => ctx.faker.lorem.word(),
-  email: (ctx) => ctx.faker.internet.exampleEmail(),
-  uuid: (ctx) => ctx.faker.string.uuid(),
-  uid: (ctx) => ctx.faker.string.uuid(),
-  url: (ctx) => ctx.faker.internet.url(),
-  name: (ctx) => ctx.faker.person.fullName(),
-  date: (ctx) => ctx.faker.date.recent().toISOString(),
-  dateTime: (ctx) => ctx.faker.date.recent().toISOString(),
-  colorHex: (ctx) => ctx.faker.color.rgb(),
-  color: (ctx) => ctx.faker.color.rgb(),
-  backgroundColor: (ctx) => ctx.faker.color.rgb(),
-  textShadow: (ctx) => ctx.faker.color.rgb(),
-  textColor: (ctx) => ctx.faker.color.rgb(),
-  textDecorationColor: (ctx) => ctx.faker.color.rgb(),
-  borderColor: (ctx) => ctx.faker.color.rgb(),
-  borderTopColor: (ctx) => ctx.faker.color.rgb(),
-  borderRightColor: (ctx) => ctx.faker.color.rgb(),
-  borderBottomColor: (ctx) => ctx.faker.color.rgb(),
-  borderLeftColor: (ctx) => ctx.faker.color.rgb(),
-  borderBlockStartColor: (ctx) => ctx.faker.color.rgb(),
-  borderBlockEndColor: (ctx) => ctx.faker.color.rgb(),
-  borderInlineStartColor: (ctx) => ctx.faker.color.rgb(),
-  borderInlineEndColor: (ctx) => ctx.faker.color.rgb(),
-  columnRuleColor: (ctx) => ctx.faker.color.rgb(),
-  outlineColor: (ctx) => ctx.faker.color.rgb(),
-  phoneNumber: (ctx) => ctx.faker.phone.number(),
-  username: (ctx) => ctx.faker.internet.username(),
-  displayName: (ctx) => ctx.faker.internet.displayName(),
-  firstName: (ctx) => ctx.faker.person.firstName(),
-  middleName: (ctx) => ctx.faker.person.middleName(),
-  lastName: (ctx) => ctx.faker.person.lastName(),
-  fullName: (ctx) => ctx.faker.person.fullName(),
-  gender: (ctx) => ctx.faker.person.gender(),
-  sex: (ctx) => ctx.faker.person.sex(),
-  zodiacSign: (ctx) => ctx.faker.person.zodiacSign(),
-  isbn: (ctx) => ctx.faker.commerce.isbn(),
-  iban: (ctx) => ctx.faker.finance.iban(),
-  vin: (ctx) => ctx.faker.vehicle.vin(),
-  vrm: (ctx) => ctx.faker.vehicle.vrm()
-};
+export const keyNameGenerators: Record<string, (ctx: StringContext) => string> =
+  {
+    default: (ctx) => ctx.faker.lorem.word(),
+    email: (ctx) => ctx.faker.internet.exampleEmail(),
+    uuid: (ctx) => ctx.faker.string.uuid(),
+    uid: (ctx) => ctx.faker.string.uuid(),
+    url: (ctx) => ctx.faker.internet.url(),
+    name: (ctx) => ctx.faker.person.fullName(),
+    date: (ctx) => ctx.faker.date.recent().toISOString(),
+    dateTime: (ctx) => ctx.faker.date.recent().toISOString(),
+    colorHex: (ctx) => ctx.faker.color.rgb(),
+    color: (ctx) => ctx.faker.color.rgb(),
+    backgroundColor: (ctx) => ctx.faker.color.rgb(),
+    textShadow: (ctx) => ctx.faker.color.rgb(),
+    textColor: (ctx) => ctx.faker.color.rgb(),
+    textDecorationColor: (ctx) => ctx.faker.color.rgb(),
+    borderColor: (ctx) => ctx.faker.color.rgb(),
+    borderTopColor: (ctx) => ctx.faker.color.rgb(),
+    borderRightColor: (ctx) => ctx.faker.color.rgb(),
+    borderBottomColor: (ctx) => ctx.faker.color.rgb(),
+    borderLeftColor: (ctx) => ctx.faker.color.rgb(),
+    borderBlockStartColor: (ctx) => ctx.faker.color.rgb(),
+    borderBlockEndColor: (ctx) => ctx.faker.color.rgb(),
+    borderInlineStartColor: (ctx) => ctx.faker.color.rgb(),
+    borderInlineEndColor: (ctx) => ctx.faker.color.rgb(),
+    columnRuleColor: (ctx) => ctx.faker.color.rgb(),
+    outlineColor: (ctx) => ctx.faker.color.rgb(),
+    phoneNumber: (ctx) => ctx.faker.phone.number(),
+    username: (ctx) => ctx.faker.internet.username(),
+    displayName: (ctx) => ctx.faker.internet.displayName(),
+    firstName: (ctx) => ctx.faker.person.firstName(),
+    middleName: (ctx) => ctx.faker.person.middleName(),
+    lastName: (ctx) => ctx.faker.person.lastName(),
+    fullName: (ctx) => ctx.faker.person.fullName(),
+    gender: (ctx) => ctx.faker.person.gender(),
+    sex: (ctx) => ctx.faker.person.sex(),
+    zodiacSign: (ctx) => ctx.faker.person.zodiacSign(),
+    isbn: (ctx) => ctx.faker.commerce.isbn(),
+    iban: (ctx) => ctx.faker.finance.iban(),
+    vin: (ctx) => ctx.faker.vehicle.vin(),
+    vrm: (ctx) => ctx.faker.vehicle.vrm()
+  };
 
 /**
  * Precomputed `Map<lowercaseKey, generator>` derived from `keyNameGenerators`.
  * Built once at module load so the per-mock keyName lookup is a single O(1)
  * `Map.get` instead of `Object.keys(...).find((k) => k.toLowerCase() === ...)`.
  */
-export const keyNameGeneratorsByLowercase: ReadonlyMap<string, (ctx: StringContext) => string> = new Map(
+export const keyNameGeneratorsByLowercase: ReadonlyMap<
+  string,
+  (ctx: StringContext) => string
+> = new Map(
   Object.entries(keyNameGenerators).map(([key, fn]) => [key.toLowerCase(), fn])
 );
 
@@ -105,22 +109,24 @@ const getDiscoveryCache = (faker: Faker): Map<string, DiscoveredFn | null> => {
 
 const discover = (lower: string, faker: Faker): DiscoveredFn | undefined => {
   const compact = lower.replace(/_|-/g, ``);
-  for (const sectionKey of Object.keys(faker) as Array<keyof Faker>) {
-    const section = faker[sectionKey];
-    if (!section || typeof section !== `object`) continue;
-    for (const fnKey of Object.keys(section)) {
+  for (const section of Object.values(faker)) {
+    if (!isFakerSection(section)) continue;
+    for (const [fnKey, fn] of Object.entries(section)) {
       const fnLower = fnKey.toLowerCase();
       if (fnLower !== lower && fnLower !== compact) continue;
-      const fn = (section as Record<string, unknown>)[fnKey];
       if (typeof fn !== `function`) continue;
       try {
-        const sample = (fn as () => unknown)();
+        const sample: unknown = fn();
         if (
           typeof sample === `string` ||
           typeof sample === `number` ||
           typeof sample === `boolean` ||
           sample instanceof Date
         ) {
+          // `fn` is a verified function that just returned a primitive/Date —
+          // exactly `DiscoveredFn`'s contract — but TS only knows it's
+          // `Function`. The runtime sample check is the proof.
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           return fn as DiscoveredFn;
         }
       } catch {
@@ -130,6 +136,15 @@ const discover = (lower: string, faker: Faker): DiscoveredFn | undefined => {
   }
   return undefined;
 };
+
+/**
+ * A Faker namespace section (e.g. `faker.internet`) — a non-null object whose
+ * members we introspect by name. Faker sections are class instances, so this
+ * narrows to a string-keyed record (values stay `unknown`; the caller checks
+ * each member is callable) without asserting.
+ */
+const isFakerSection = (section: unknown): section is Record<string, unknown> =>
+  typeof section === `object` && section !== null;
 
 /**
  * Last-resort discovery: walk Faker's namespaces looking for a method whose

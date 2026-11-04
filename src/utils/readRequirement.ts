@@ -7,29 +7,38 @@ import type * as v from "valibot";
  * on the object, but some validations (e.g. `email`, `integer`) declare a
  * function-typed requirement instead of a value.
  */
-export const readRequirement = (action: v.GenericPipeItem | v.GenericPipeItemAsync): unknown =>
-  (action as { requirement?: unknown }).requirement;
+export const readRequirement = (
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): unknown => (`requirement` in action ? action.requirement : undefined);
 
 /** Coerce the requirement to a number, returning undefined for non-finite or non-number values. */
-export const readNumber = (action: v.GenericPipeItem | v.GenericPipeItemAsync): number | undefined => {
+export const readNumber = (
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): number | undefined => {
   const req = readRequirement(action);
   return typeof req === `number` && Number.isFinite(req) ? req : undefined;
 };
 
 /** Coerce the requirement to a string, returning undefined otherwise. */
-export const readString = (action: v.GenericPipeItem | v.GenericPipeItemAsync): string | undefined => {
+export const readString = (
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): string | undefined => {
   const req = readRequirement(action);
   return typeof req === `string` ? req : undefined;
 };
 
 /** Coerce the requirement to a bigint, returning undefined otherwise. */
-export const readBigint = (action: v.GenericPipeItem | v.GenericPipeItemAsync): bigint | undefined => {
+export const readBigint = (
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): bigint | undefined => {
   const req = readRequirement(action);
   return typeof req === `bigint` ? req : undefined;
 };
 
 /** Coerce the requirement to a Date instance, returning undefined otherwise. */
-export const readDate = (action: v.GenericPipeItem | v.GenericPipeItemAsync): Date | undefined => {
+export const readDate = (
+  action: v.GenericPipeItem | v.GenericPipeItemAsync
+): Date | undefined => {
   const req = readRequirement(action);
   return req instanceof Date ? req : undefined;
 };
