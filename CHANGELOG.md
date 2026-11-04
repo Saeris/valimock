@@ -6,6 +6,13 @@
 
 
 
+
+## 1.7.0
+<sub>2026-11-04</sub>
+
+- [#80](https://github.com/Saeris/valimock/pull/80)  *(minor)* Thanks [@Saeris](https://github.com/Saeris)!
+  Add `stringActions` and `stringFormats` options so libraries can register generators for their own string actions without replacing the built-in string generator. Pass a `mock` function as the third argument of `customMocks` entries so container overrides can recurse with the same instance. Flatten nested pipes when collecting constraints, so `v.pipe(v.pipe(...), ...)` no longer drops inner actions such as `integer`. Seed Faker once per top-level `mock()` call instead of before every nested value, so sibling fields with the same schema no longer receive identical values.
+
 ## 1.6.0
 <sub>2026-06-03</sub>
 
