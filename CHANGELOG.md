@@ -7,6 +7,13 @@
 
 
 
+
+## 1.7.1
+<sub>2026-11-04</sub>
+
+- [#82](https://github.com/Saeris/valimock/pull/82)  *(patch)* Thanks [@Saeris](https://github.com/Saeris)!
+  Fix string generation skipping the length bound when a key-name generator (such as `faker.lorem.text()` for a `text` key) produced a value longer than the schema's `maxLength`/`maxGraphemes`/`maxBytes` allowed.
+
 ## 1.7.0
 <sub>2026-11-04</sub>
 
