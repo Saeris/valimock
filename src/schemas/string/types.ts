@@ -46,6 +46,14 @@ export interface StringContext {
   /** Set when any word-count action was collected (so the generator routes to word output). */
   wordCountSet: boolean;
 
+  /**
+   * Scratch space for user-supplied action handlers (`stringActions`) to hand
+   * data to their format generators (`stringFormats`), such as the accepted
+   * MIME types collected from an action's `requirement`. Valimock never reads
+   * or writes it.
+   */
+  readonly custom: Record<string, unknown>;
+
   /** Diagnostics — unknown action types, conflicting constraints, etc. Surfaced via `Valimock.options`. */
   warnings: string[];
 }
@@ -58,6 +66,14 @@ export type ActionHandler = (
   ctx: StringContext,
   action: v.GenericPipeItem | v.GenericPipeItemAsync
 ) => void;
+
+/**
+ * Produces a candidate string for the format recorded in `ctx.format`.
+ * Generators should honor `ctx.bounds` where the format allows variable
+ * length, and otherwise return a format-valid value and let the retry loop
+ * surface the conflict.
+ */
+export type FormatGenerator = (ctx: StringContext) => string;
 
 /**
  * A phase is a single ordered pass over the Context. Returns the (possibly produced) value

@@ -14,7 +14,14 @@ import { generateNumber } from "./schemas/number/generateNumber.js";
 import { generateObject } from "./schemas/object.js";
 import { generateRecord } from "./schemas/record.js";
 import { generateSet } from "./schemas/set.js";
+import { actionHandlers } from "./schemas/string/actionHandlers.js";
+import { formatGenerators } from "./schemas/string/formatGenerators.js";
 import { generateString } from "./schemas/string/generateString.js";
+import type {
+  ActionHandler,
+  FormatGenerator,
+  StringContext
+} from "./schemas/string/types.js";
 import { generateTuple } from "./schemas/tuple.js";
 import { generateUnion } from "./schemas/union.js";
 import { generateVariant } from "./schemas/variant.js";
@@ -41,6 +48,35 @@ export type MockeryMapper = (
   fakerInstance: Faker
 ) => FakerFunction | undefined;
 
+/**
+ * The constraint state a string action handler reads and writes. Re-exported
+ * so `stringActions` and `stringFormats` entries can be typed without
+ * reaching into `src/`.
+ */
+export type { StringContext };
+
+/**
+ * A `stringActions` entry: runs for every pipe action whose `type` matches
+ * its key and records what the action means on the context, usually by
+ * naming a format (`ctx.format = "did"`) for a `stringFormats` generator.
+ */
+export type StringActionHandler = ActionHandler;
+
+/**
+ * A `stringFormats` entry: produces a string for the format name a handler
+ * recorded in `ctx.format`.
+ */
+export type StringFormatGenerator = FormatGenerator;
+
+/**
+ * Mocks a schema with the same instance and options as the current call.
+ * Passed to `customMocks` entries so container schemas can recurse.
+ */
+export type MockFunction = (
+  schema: v.GenericSchema | v.GenericSchemaAsync,
+  keyName?: string
+) => unknown;
+
 export interface ValimockOptions {
   /**
    * Faker class instance for mocking
@@ -64,6 +100,21 @@ export interface ValimockOptions {
   stringMap?: Record<string, (...args: any[]) => string>;
 
   /**
+   * Handlers for string pipe actions, keyed by action `type`. Merged over the
+   * built-in registry, so they can add support for actions from other
+   * libraries (`did`, `handle`, ...) or override a built-in one. A handler
+   * records what it learned on the `StringContext`, typically by setting
+   * `ctx.format` to a name that `stringFormats` knows how to generate.
+   */
+  stringActions?: Record<string, StringActionHandler>;
+
+  /**
+   * Generators for string formats, keyed by the format name a handler stores
+   * in `ctx.format`. Merged over the built-in registry.
+   */
+  stringFormats?: Record<string, StringFormatGenerator>;
+
+  /**
    * @deprecated Will be removed in a future major. The string mocking pipeline now
    * resolves Faker methods directly from a property name and via the action
    * registry in `src/string/`. To extend mock generation, prefer adding entries
@@ -82,18 +133,20 @@ export interface ValimockOptions {
   onWarn: (message: string) => void;
 
   /**
-   * This is a mapping of field name to mock generator function.
-   * This mapping can be used to provide backup mock
-   * functions for Schema types not yet implemented.
+   * Mock generators keyed by schema `type`, consulted before every built-in
+   * mocker. Use them for schema types Valimock does not support (such as
+   * `custom`) or to override a built-in one.
    *
-   * The functions in this map will only be used if this library
-   * is unable to find an appropriate mocking function to use.
+   * Each entry receives the schema, the options of the instance, and a
+   * `mock` function bound to the same instance for recursing into nested
+   * schemas, so container types never need a second `Valimock`.
    */
   customMocks: Record<
     string,
     (
       schema: v.GenericSchema | v.GenericSchemaAsync,
-      options?: ValimockOptions
+      options?: ValimockOptions,
+      mock?: MockFunction
     ) => unknown
   >;
 
@@ -186,10 +239,23 @@ export class Valimock {
   /** Backing storage for `instrumentation`. Only mutated when `options.instrument` is true. */
   #instrumentation: ValimockInstrumentation = { mockCalls: 0, maxDepth: 0 };
 
+  /** Built-in string action handlers with `options.stringActions` merged over them. */
+  #stringActionHandlers!: Record<string, ActionHandler>;
+  /** Built-in string format generators with `options.stringFormats` merged over them. */
+  #stringFormatGenerators!: Record<string, FormatGenerator>;
+
   constructor(options?: Partial<ValimockOptions>) {
     Object.assign(this.options, options);
     this.#schemaHandlers = new Map(Object.entries(this.#schemas));
     this.#customMockTypes = new Set(Object.keys(this.options.customMocks));
+    // Merge once here rather than per string, since string generation is the
+    // hottest path in the library.
+    this.#stringActionHandlers = this.options.stringActions
+      ? { ...actionHandlers, ...this.options.stringActions }
+      : actionHandlers;
+    this.#stringFormatGenerators = this.options.stringFormats
+      ? { ...formatGenerators, ...this.options.stringFormats }
+      : formatGenerators;
   }
 
   /**
@@ -236,8 +302,13 @@ export class Valimock {
     return computed;
   };
 
-  mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> =>
-    this.#mock(schema);
+  mock = <T extends Schema>(schema: T): v.InferOutput<typeof schema> => {
+    // Seed once per top-level call. Seeding inside `#mock` would reset the
+    // PRNG before every nested value, so sibling fields with the same schema
+    // would all receive the same mock.
+    if (this.options.seed) this.options.faker.seed(this.options.seed);
+    return this.#mock(schema);
+  };
 
   #mock = <T extends Schema>(
     schema: T,
@@ -254,7 +325,6 @@ export class Valimock {
       }
     }
     try {
-      if (this.options.seed) this.options.faker.seed(this.options.seed);
       // `customMocks` is consulted BEFORE every built-in path (including the
       // string fast-path below) so callers can override Valimock's behavior
       // for any schema type. Common use: `customMocks: { any: () => undefined }`
@@ -268,7 +338,11 @@ export class Valimock {
       // method in the library — on a 50-field self-referencing schema this
       // can fire 5,000+ times per top-level `mock()` call.
       if (this.#customMockTypes.has(schema.type)) {
-        return this.options.customMocks[schema.type](schema, this.options);
+        return this.options.customMocks[schema.type](
+          schema,
+          this.options,
+          this.#mock
+        );
       }
       if (
         v.isOfType<
@@ -595,6 +669,8 @@ export class Valimock {
       faker: this.options.faker,
       keyName,
       stringMap: this.options.stringMap,
+      actionHandlers: this.#stringActionHandlers,
+      formatGenerators: this.#stringFormatGenerators,
       // Deliberately consuming the deprecated `mockeryMapper` for backwards
       // compatibility; `onDeprecatedMapper` below emits the one-time warning.
       // eslint-disable-next-line @typescript-eslint/no-deprecated

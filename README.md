@@ -65,30 +65,72 @@ describe(`example test`, () => {
 
 `new Valimock(options)` accepts a partial options object:
 
-| option               | type                                  | default                | purpose                                                                                                                                                   |
-| -------------------- | ------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `faker`              | `Faker`                               | default Faker instance | Faker instance used for all generation; supply your own to control locale or seeding centrally                                                            |
-| `seed`               | `number \| number[]`                  | `undefined`            | Re-seeds Faker on every `mock()` call for deterministic output                                                                                            |
-| `stringMap`          | `Record<string, () => string>`        | `undefined`            | Per-key string overrides (when generating strings inside an object). Wins over the built-in format/key-name routing.                                      |
-| `customMocks`        | `Record<string, (schema) => unknown>` | `{}`                   | Generators for Valibot schema `type`s Valimock doesn't yet support. Keyed by `schema.type`.                                                               |
-| `recordKeysLength`   | `number`                              | `1`                    | How many entries to generate for a `record()` schema                                                                                                      |
-| `mapEntriesLength`   | `number`                              | `1`                    | How many entries to generate for a `map()` schema                                                                                                         |
-| `throwOnUnknownType` | `boolean`                             | `false`                | When true, throw a `MockError` for unrecognized schema types instead of warning                                                                           |
-| `onWarn`             | `(message: string) => void`           | `console.warn`         | Diagnostic sink. Receives unhandled-action notices, retry-budget exhaustion, and generation errors. Set to `() => {}` to silence.                         |
-| `mockeryMapper`      | `MockeryMapper`                       | built-in defaults      | **Deprecated.** Prefer `stringMap` or contributing an action handler. Still consulted for backwards compatibility; emits a one-time warning when invoked. |
+| option               | type                                                 | default                | purpose                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `faker`              | `Faker`                                              | default Faker instance | Faker instance used for all generation; supply your own to control locale or seeding centrally                                                            |
+| `seed`               | `number \| number[]`                                 | `undefined`            | Re-seeds Faker at the start of every top-level `mock()` call for deterministic output                                                                     |
+| `stringMap`          | `Record<string, () => string>`                       | `undefined`            | Per-key string overrides (when generating strings inside an object). Wins over the built-in format/key-name routing.                                      |
+| `stringActions`      | `Record<string, StringActionHandler>`                | `{}`                   | Handlers for string pipe actions Valimock doesn't know, keyed by action `type`. See [Extending string generation](#extending-string-generation).          |
+| `stringFormats`      | `Record<string, StringFormatGenerator>`              | `{}`                   | Generators for the format names your `stringActions` handlers record in `ctx.format`.                                                                     |
+| `customMocks`        | `Record<string, (schema, options, mock) => unknown>` | `{}`                   | Generators for Valibot schema `type`s Valimock doesn't yet support. Keyed by `schema.type`; `mock` recurses into nested schemas with the same instance.   |
+| `recordKeysLength`   | `number`                                             | `1`                    | How many entries to generate for a `record()` schema                                                                                                      |
+| `mapEntriesLength`   | `number`                                             | `1`                    | How many entries to generate for a `map()` schema                                                                                                         |
+| `throwOnUnknownType` | `boolean`                                            | `false`                | When true, throw a `MockError` for unrecognized schema types instead of warning                                                                           |
+| `onWarn`             | `(message: string) => void`                          | `console.warn`         | Diagnostic sink. Receives unhandled-action notices, retry-budget exhaustion, and generation errors. Set to `() => {}` to silence.                         |
+| `mockeryMapper`      | `MockeryMapper`                                      | built-in defaults      | **Deprecated.** Prefer `stringMap` or contributing an action handler. Still consulted for backwards compatibility; emits a one-time warning when invoked. |
+
+### Extending string generation
+
+Libraries that ship their own string actions (`v.pipe(v.string(), did())`)
+can teach Valimock to generate matching values without replacing the whole
+string generator. A `stringActions` handler runs when its action `type` is
+found in a pipe and records what it learned on the `StringContext`, usually
+by naming a format; a `stringFormats` generator with that name then produces
+the value. Everything else (length bounds, `stringMap`, key-name heuristics)
+keeps working around them.
+
+```ts
+import { Valimock } from "valimock";
+
+const mock = new Valimock({
+  stringActions: {
+    // `did()` is a validation action with `type: "did"`.
+    did: (ctx) => {
+      ctx.format = `did`;
+    },
+    // Handlers can read the action's requirement and stash it for the
+    // generator in `ctx.custom`.
+    accept: (ctx, action) => {
+      ctx.format = `mime`;
+      ctx.custom.accept = (action as { requirement: string[] }).requirement;
+    }
+  },
+  stringFormats: {
+    did: (ctx) => `did:plc:${ctx.faker.string.alphanumeric(24).toLowerCase()}`,
+    mime: (ctx) => ctx.faker.helpers.arrayElement(ctx.custom.accept as string[])
+  }
+});
+```
+
+Both tables are merged over the built-in registries, so an entry can also
+override how Valimock handles one of its own actions.
 
 ## API Coverage
 
 Valimock's string mocking is built around a small pipeline (`src/schemas/string/`)
 with a per-action registry. Adding support for a new Valibot action is a
-one-line addition to the registry. See [Contributing](#-contributing) below.
+one-line addition to the registry, or a `stringActions` entry from userland.
+See [Contributing](#-contributing) below.
 
 Any schema type Valimock doesn't yet support can be handled by supplying a
-`customMocks` entry keyed by the schema's `type` field. When Valimock has
-no built-in mocker and no matching `customMocks` entry (notably for
-`v.custom(...)`), it emits an `onWarn` notice and returns `undefined`
-rather than silently producing an invalid value. Set
-`throwOnUnknownType: true` to turn that into a thrown `MockError`.
+`customMocks` entry keyed by the schema's `type` field. The entry receives
+the schema, the instance options, and a `mock` function that recurses into
+nested schemas with the same instance, so container types can be mocked
+without constructing a second `Valimock`. When Valimock has no built-in
+mocker and no matching `customMocks` entry (notably for `v.custom(...)`), it
+emits an `onWarn` notice and returns `undefined` rather than silently
+producing an invalid value. Set `throwOnUnknownType: true` to turn that into
+a thrown `MockError`.
 
 ### Schemas
 

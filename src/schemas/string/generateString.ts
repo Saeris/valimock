@@ -9,7 +9,12 @@ import {
   generate,
   satisfies
 } from "./phases.js";
-import { DEFAULT_MAX_LENGTH, type StringContext } from "./types.js";
+import {
+  type ActionHandler,
+  DEFAULT_MAX_LENGTH,
+  type FormatGenerator,
+  type StringContext
+} from "./types.js";
 
 /**
  * A context is "trivially satisfiable" when `generate()` alone is guaranteed
@@ -37,6 +42,14 @@ export interface GenerateStringOptions {
   keyName?: string;
   /** User-supplied per-key overrides. If a key matches, this wins over format/key-name generators. */
   stringMap?: Record<string, (...args: unknown[]) => string>;
+  /**
+   * Action handlers keyed by action `type`, consulted instead of the built-in
+   * registry. Callers merge their additions over the built-ins once, so this
+   * is a complete table rather than an overlay.
+   */
+  actionHandlers?: Record<string, ActionHandler>;
+  /** Format generators keyed by format name; a complete table like `actionHandlers`. */
+  formatGenerators?: Record<string, FormatGenerator>;
   /** Deprecated user-supplied faker resolver; consulted before auto-discovery if present. */
   mockeryMapper?: MockeryMapper;
   /** Called once if `mockeryMapper` is actually invoked during this call. */
@@ -85,10 +98,11 @@ export const generateString = (
     wordBounds: { min: 0, max: Number.MAX_SAFE_INTEGER },
     forbiddenWordCounts: new Set(),
     wordCountSet: false,
+    custom: {},
     warnings: []
   };
 
-  collectConstraints(ctx);
+  collectConstraints(ctx, options.actionHandlers);
 
   // Exact-value pin wins over everything else.
   if (ctx.exactValue !== undefined) {
@@ -115,6 +129,7 @@ export const generateString = (
       : undefined;
 
   const extras = {
+    formatGenerators: options.formatGenerators,
     mockeryMapper: options.mockeryMapper,
     onDeprecatedMapper: options.onDeprecatedMapper
   };

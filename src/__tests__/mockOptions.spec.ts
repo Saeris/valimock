@@ -17,6 +17,20 @@ describe(`valimock options`, () => {
       expect(a).toStrictEqual(b);
     });
 
+    it(`seeds once per top-level call so sibling fields differ`, () => {
+      // Reseeding before every nested value would make two fields with the
+      // same schema identical in every mock, which defeats the purpose of a
+      // seeded but realistic fixture. Determinism across calls must survive.
+      const schema = v.object({
+        first: v.pipe(v.string(), v.uuid()),
+        second: v.pipe(v.string(), v.uuid())
+      });
+      const a = new Valimock({ onWarn: () => {}, seed: 7 }).mock(schema);
+      const b = new Valimock({ onWarn: () => {}, seed: 7 }).mock(schema);
+      expect(a.first).not.toBe(a.second);
+      expect(a).toStrictEqual(b);
+    });
+
     it(`different seeds usually produce different values`, () => {
       const schema = v.pipe(v.string(), v.minLength(5), v.maxLength(20));
       const a = new Valimock({ onWarn: () => {}, seed: 1 }).mock(schema);

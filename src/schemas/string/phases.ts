@@ -1,7 +1,7 @@
 import RandExp from "randexp";
 import { walkPipe } from "../../utils/walkPipe.js";
 import { unhandledValidation } from "../../utils/warnings.js";
-import { actionHandlers, knownActionTypes } from "./actionHandlers.js";
+import { actionHandlers } from "./actionHandlers.js";
 import { formatGenerators } from "./formatGenerators.js";
 import {
   keyNameGeneratorsByLowercase,
@@ -9,14 +9,17 @@ import {
   type MockeryMapper
 } from "./keyNameGenerators.js";
 import {
+  type ActionHandler,
   DEFAULT_MAX_LENGTH,
   ENFORCE_RETRY_BUDGET,
-  type Phase,
+  type FormatGenerator,
   type StringContext
 } from "./types.js";
 
 /** Extra context the `generate` phase needs but Context shouldn't expose to handlers. */
 export interface GenerateExtras {
+  /** Format generators to consult instead of the built-in registry. */
+  formatGenerators?: Record<string, FormatGenerator>;
   mockeryMapper?: MockeryMapper;
   onDeprecatedMapper?: () => void;
 }
@@ -25,11 +28,16 @@ export interface GenerateExtras {
  * Phase 1 — walk the schema's pipe and accumulate constraint state.
  * Each action's handler reads the action's `requirement` field and mutates
  * the Context. Unknown action types are recorded as warnings.
+ *
+ * `handlers` defaults to the built-in registry; `Valimock` passes a table
+ * with the user's `stringActions` merged over it.
  */
-export const collectConstraints: Phase = (ctx) => {
-  walkPipe(ctx.schema, ctx, actionHandlers, (type) => {
-    if (!knownActionTypes.has(type))
-      ctx.warnings.push(unhandledValidation(`string`, type));
+export const collectConstraints = (
+  ctx: StringContext,
+  handlers: Record<string, ActionHandler> = actionHandlers
+): undefined => {
+  walkPipe(ctx.schema, ctx, handlers, (type) => {
+    ctx.warnings.push(unhandledValidation(`string`, type));
   });
   return undefined;
 };
@@ -67,8 +75,9 @@ export const generate = (
     return ctx.faker.lorem.words(count);
   }
 
-  if (ctx.format && ctx.format in formatGenerators) {
-    return formatGenerators[ctx.format](ctx);
+  const generators = extras.formatGenerators ?? formatGenerators;
+  if (ctx.format && ctx.format in generators) {
+    return generators[ctx.format](ctx);
   }
 
   if (ctx.regex) {
