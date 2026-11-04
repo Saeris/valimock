@@ -137,10 +137,18 @@ export const generateString = (
   // Fast path: when no constraints are present, faker's default output
   // (lorem.word or a keyName generator) is always valid. Skip the retry
   // loop entirely — `enforce` is a no-op without required substrings or
-  // tight bounds, and `satisfies` is trivially true.
+  // tight bounds, and `satisfies` is trivially true. The one thing a
+  // key-name generator can still violate is the upper bound: auto-discovered
+  // generators like `faker.lorem.text()` for a `text` key run past
+  // DEFAULT_MAX_LENGTH, so an explicit `maxLength`/`maxGraphemes` on that
+  // field would be silently exceeded. A single length check keeps the fast
+  // path honest without paying for the full retry loop.
   if (!userOverride && isTriviallySatisfiable(ctx)) {
     flushWarnings(ctx, options.onWarn);
-    return generate(ctx, extras);
+    const candidate = generate(ctx, extras);
+    return candidate.length > ctx.bounds.max
+      ? enforce(candidate, ctx)
+      : candidate;
   }
 
   for (let attempt = 0; attempt < ENFORCE_RETRY_BUDGET; attempt++) {

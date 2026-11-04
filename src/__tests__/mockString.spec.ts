@@ -409,6 +409,21 @@ describe(`mockString`, () => {
         expect(v.parse(schema, result)).toBe(result);
       }
     });
+
+    it(`honors an upper bound when the key-name generator overshoots it`, () => {
+      // Auto-discovery maps a `text` key to `faker.lorem.text()`, whose output
+      // regularly exceeds the 128-char default. `maxGraphemes(300)` has no
+      // min, regex, or substring requirements, so the context looks trivially
+      // satisfiable and used to skip `enforce` entirely, returning a value
+      // the schema then rejected. The bound must win over the generator.
+      const schema = v.object({
+        text: v.pipe(v.string(), v.maxGraphemes(300))
+      });
+      for (let i = 0; i < 50; i++) {
+        const result = mock(schema);
+        expect(v.safeParse(schema, result).success).toBe(true);
+      }
+    });
   });
 
   describe(`edge cases — stringMap override`, () => {
