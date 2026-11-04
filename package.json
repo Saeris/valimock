@@ -1,6 +1,6 @@
 {
   "name": "valimock",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Generate mock data for Valibot schemas using Faker",
   "keywords": [
     "faker",
